@@ -1,0 +1,16 @@
+tracker:
+  experiment: 2
+  run: judge_pipeline
+  status: runnable
+model:
+  name: meta-llama/Meta-Llama-3-8B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+kind: safety            # "safety" | "coherence"
+max_new_tokens: 256
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+seed: 0
+n_limit: null

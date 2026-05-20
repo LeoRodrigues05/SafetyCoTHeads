@@ -1,0 +1,31 @@
+# Tracker Exp 5: Joint / Disentangled Ablation
+# Run: ablate quality heads on JailbreakBench.
+tracker:
+  experiment: 5
+  run: quality_head_ablation
+  status: blocked_until_discovery_wired
+seed: 0
+condition: quality_head_ablation
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+heads:
+  source: file
+  path: runs/08-quality-discovery/quality_dataset_ranking.json
+  top_k: 10
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/08b-quality-ablation

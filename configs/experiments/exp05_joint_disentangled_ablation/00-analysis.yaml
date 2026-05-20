@@ -1,0 +1,38 @@
+# Tracker Exp 5: Joint / Disentangled Ablation
+# Run: cross-condition analysis and head-set overlap.
+tracker:
+  experiment: 5
+  run: cross_condition_analysis
+  status: runnable_after_judging
+output:
+  dir: runs/analysis
+
+judge_files:
+  baseline:                                runs/03-baseline/judge_baseline.jsonl
+  safety_head_ablation:                    runs/04-safety-head-ablation/judge_safety_head_ablation.jsonl
+  random_head_ablation:                    runs/05-random-head-ablation/judge_random_head_ablation.jsonl
+  layer_matched_random_head_ablation:      runs/06-layer-matched-random/judge_layer_matched_random_head_ablation.jsonl
+  coherency_head_ablation:                 runs/07b-coherency-ablation/judge_coherency_head_ablation.jsonl
+  quality_head_ablation:                   runs/08b-quality-ablation/judge_quality_head_ablation.jsonl
+  safety_excluding_coherency_overlap:      runs/09-safety-minus-coherency/judge_safety_excluding_coherency_overlap.jsonl
+  overlap_heads_only:                      runs/10-overlap-only/judge_overlap_heads_only.jsonl
+
+attribution_files:
+  ships:
+    path: runs/01-ships-discovery/ships_dataset_ranking.json
+    top_k: 10
+  sahara:
+    path: runs/02-sahara-discovery/sahara.json
+    top_k: 10
+  coherency:
+    path: runs/07-coherency-discovery/coherency_dataset_ranking.json
+    top_k: 10
+  quality:
+    path: runs/08-quality-discovery/quality_dataset_ranking.json
+    top_k: 10
+
+heatmaps:
+  ships:
+    path: runs/01-ships-discovery/ships_dataset_ranking.json
+    n_layers: 32
+    n_heads: 32

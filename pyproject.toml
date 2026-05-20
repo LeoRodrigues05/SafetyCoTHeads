@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safety_cot_heads"
+version = "0.1.0"
+description = "Causal study of attention heads in CoT safety reasoning."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Leo Rodrigues" }]
+dependencies = [
+    "torch>=2.2",
+    "transformers>=4.44,<4.50",
+    "accelerate>=0.30",
+    "omegaconf>=2.3",
+    "pyyaml",
+    "pandas",
+    "numpy",
+    "datasets>=2.18",
+    "tqdm",
+    "jsonlines",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn",
+]
+
+[project.optional-dependencies]
+quant = ["bitsandbytes"]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"safety_cot_heads._legacy.sha" = ["notebooks/*.ipynb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

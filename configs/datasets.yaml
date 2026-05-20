@@ -1,0 +1,18 @@
+# Dataset registry — referenced by experiment configs.
+maliciousinstruct:                     # discovery split (SHIPS / Sahara)
+  name: maliciousinstruct
+  n: 100
+jailbreakbench:                        # evaluation split
+  name: jailbreakbench
+  n: 100
+beavertails_full:
+  name: beavertails
+  categories: null                     # all 14 → category sweep
+  n_per_category: 50
+beavertails_smoke:
+  name: beavertails
+  categories: ["animal_abuse", "violence,aiding_and_abetting,incitement"]
+  n_per_category: 10
+alpaca_benign:
+  name: alpaca
+  n: 100

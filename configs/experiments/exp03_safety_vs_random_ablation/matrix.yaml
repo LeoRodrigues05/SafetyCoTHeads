@@ -1,0 +1,20 @@
+# Example experiment-matrix expansion config (used by make_experiment_matrix.py).
+# Expands the Cartesian product of `axes` over `base` and writes one yaml per cell.
+tracker:
+  experiment: 3
+  run: optional_matrix
+  status: runnable
+base:
+  seed: 0
+  decoding: {max_new_tokens: 256, temperature: 0.0, do_sample: false, seed: 0}
+  batch_size: 4
+  dataset: {name: jailbreakbench, n: 100}
+  output: {dir: runs/matrix}
+axes:
+  condition:
+    - baseline
+    - safety_head_ablation
+    - random_head_ablation
+  model:
+    - {name: meta-llama/Llama-2-7b-chat-hf, dtype: bfloat16, attn_implementation: eager}
+    - {name: mistralai/Mistral-7B-Instruct-v0.2, dtype: bfloat16, attn_implementation: eager}

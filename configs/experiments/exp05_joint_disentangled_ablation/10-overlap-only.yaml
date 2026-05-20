@@ -1,0 +1,33 @@
+# Tracker Exp 5: Joint / Disentangled Ablation
+# Run: ablate only safety/coherency overlap.
+# Ablate ONLY safety ∩ coherency overlap (does removing the shared core
+# break safety more than removing safety-unique heads?).
+tracker:
+  experiment: 5
+  run: overlap_heads_only
+  status: requires_overlap_heads
+seed: 0
+condition: overlap_heads_only
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+heads:
+  source: explicit
+  heads:                           # filled in after overlap analysis
+    - {layer: 12, head: 4}
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/10-overlap-only

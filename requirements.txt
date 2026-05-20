@@ -1,0 +1,30 @@
+# Core
+torch>=2.2
+transformers>=4.44,<4.50
+accelerate>=0.30
+tokenizers>=0.19
+sentencepiece
+safetensors
+
+# Configs / IO / data
+omegaconf>=2.3
+pyyaml
+pandas
+numpy
+datasets>=2.18
+tqdm
+jsonlines
+
+# Quantization (optional, for big judges)
+bitsandbytes ; platform_system == "Linux"
+
+# Analysis / plotting
+scikit-learn
+matplotlib
+seaborn
+
+# Sentence splitting (optional; regex fallback used if absent)
+# spacy
+
+# Tests
+pytest

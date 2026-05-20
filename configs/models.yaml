@@ -1,0 +1,25 @@
+# Model definitions referenced by experiment configs via ${models.<name>}.
+# Override per-host with `--overrides model.name=...`.
+llama2_7b_chat:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+mistral_7b_instruct:
+  name: mistralai/Mistral-7B-Instruct-v0.2
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# Judge — also a chat model, but run in 4-bit by default to save VRAM
+judge_llama3_8b:
+  name: meta-llama/Meta-Llama-3-8B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+  trust_remote_code: false

@@ -1,0 +1,24 @@
+# Tracker Exp 4: Coherency-Head Discovery
+# Run: discover coherency heads in NLL mode on benign prompts.
+tracker:
+  experiment: 4
+  run: coherency_discovery
+  status: planned_unwired
+seed: 0
+method: coherency
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: alpaca
+  n: 100
+method_args:
+  mode: nll                       # nll | judge_coherence | pathology | hybrid
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+  top_k: 10
+output:
+  dir: runs/07-coherency-discovery
+  top_k: 16

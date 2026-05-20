@@ -1,0 +1,31 @@
+# Tracker Exp 3: Safety-Head vs Random-Head Ablation
+# Run: ablate random heads matched by per-layer distribution of SHIPS top-K.
+tracker:
+  experiment: 3
+  run: layer_matched_random_head_ablation
+  status: runnable
+seed: 0
+condition: layer_matched_random_head_ablation
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+heads:
+  source: layer_matched
+  reference_path: runs/01-ships-discovery/ships_dataset_ranking.json
+  top_k: 10
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/06-layer-matched-random

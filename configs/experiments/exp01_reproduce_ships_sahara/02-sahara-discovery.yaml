@@ -1,0 +1,24 @@
+# Tracker Exp 1: Reproduce SHIPS + Sahara
+# Run: Sahara greedy SVD attribution on MaliciousInstruct.
+tracker:
+  experiment: 1
+  run: sahara_discovery
+  status: runnable
+seed: 0
+method: sahara
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: maliciousinstruct
+  n: 100
+method_args:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-5
+  search_step: 8
+  prompt_template: "## Query:{q}\n## Answer:"
+output:
+  dir: runs/02-sahara-discovery
+  top_k: 16

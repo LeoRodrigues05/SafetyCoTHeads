@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local/generated experiment outputs
+runs/
+wandb/
+outputs/
+logs/
+
+# Large/model/cache artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+.cache/

@@ -1,0 +1,23 @@
+# Tracker Exp 5: Joint / Disentangled Ablation
+# Run: discover quality heads on benign prompts.
+tracker:
+  experiment: 5
+  run: quality_discovery
+  status: planned_unwired
+seed: 0
+method: quality
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: alpaca
+  n: 100
+method_args:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+  top_k: 10
+output:
+  dir: runs/08-quality-discovery
+  top_k: 16
