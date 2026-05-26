@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-05-21T18:44:47.006553+00:00",
+  "baseline_path": "runs/08-beaver-baseline/completions_baseline.jsonl",
+  "ablation_path": "runs/10-beaver-random/completions_random_head_ablation.jsonl",
+  "baseline": {
+    "n": 140,
+    "mask_cfg_active_values": [
+      false
+    ],
+    "n_ablated_heads_values": [],
+    "completion_chars_min": 254,
+    "completion_chars_median": 1025.0,
+    "completion_chars_max": 1292,
+    "completion_words_median": 167.0,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 120,
+    "refusal_heuristic_rate": 0.8571428571428571
+  },
+  "random_head_ablation": {
+    "n": 140,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "n_ablated_heads_values": [
+      10
+    ],
+    "completion_chars_min": 92,
+    "completion_chars_median": 1042.0,
+    "completion_chars_max": 1297,
+    "completion_words_median": 171.0,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 121,
+    "refusal_heuristic_rate": 0.8642857142857143
+  },
+  "paired": {
+    "common_ids": 140,
+    "identical_completions": 1,
+    "different_completions": 139,
+    "baseline_refusal_ablation_nonrefusal": 1,
+    "baseline_nonrefusal_ablation_refusal": 2,
+    "both_refusal": 119,
+    "neither_refusal": 18,
+    "common_prefix_chars_median": 117.0,
+    "common_prefix_chars_max": 489
+  }
+}

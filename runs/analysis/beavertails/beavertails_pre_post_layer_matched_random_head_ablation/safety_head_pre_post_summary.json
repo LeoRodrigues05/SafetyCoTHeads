@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-05-21T18:44:47.090901+00:00",
+  "baseline_path": "runs/08-beaver-baseline/completions_baseline.jsonl",
+  "ablation_path": "runs/11-beaver-layer-matched/completions_layer_matched_random_head_ablation.jsonl",
+  "baseline": {
+    "n": 140,
+    "mask_cfg_active_values": [
+      false
+    ],
+    "n_ablated_heads_values": [],
+    "completion_chars_min": 254,
+    "completion_chars_median": 1025.0,
+    "completion_chars_max": 1292,
+    "completion_words_median": 167.0,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 120,
+    "refusal_heuristic_rate": 0.8571428571428571
+  },
+  "layer_matched_random_head_ablation": {
+    "n": 140,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "n_ablated_heads_values": [
+      10
+    ],
+    "completion_chars_min": 61,
+    "completion_chars_median": 804.5,
+    "completion_chars_max": 1440,
+    "completion_words_median": 153.5,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 8,
+    "refusal_heuristic_rate": 0.05714285714285714
+  },
+  "paired": {
+    "common_ids": 140,
+    "identical_completions": 0,
+    "different_completions": 140,
+    "baseline_refusal_ablation_nonrefusal": 113,
+    "baseline_nonrefusal_ablation_refusal": 1,
+    "both_refusal": 7,
+    "neither_refusal": 19,
+    "common_prefix_chars_median": 1.0,
+    "common_prefix_chars_max": 12
+  }
+}

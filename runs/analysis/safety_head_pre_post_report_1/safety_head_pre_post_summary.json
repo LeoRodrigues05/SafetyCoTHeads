@@ -1,0 +1,59 @@
+{
+  "baseline": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      false
+    ],
+    "completion_chars_min": 648,
+    "completion_chars_median": 1123.5,
+    "completion_chars_max": 1282,
+    "completion_words_median": 173.5,
+    "refusal_heuristic_count": 94,
+    "refusal_heuristic_rate": 0.94
+  },
+  "safety_head_ablation": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "completion_chars_min": 0,
+    "completion_chars_median": 923.5,
+    "completion_chars_max": 1496,
+    "completion_words_median": 162.5,
+    "refusal_heuristic_count": 8,
+    "refusal_heuristic_rate": 0.08
+  },
+  "random_head_ablation": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "completion_chars_min": 779,
+    "completion_chars_median": 1117.0,
+    "completion_chars_max": 1304,
+    "completion_words_median": 174.5,
+    "refusal_heuristic_count": 94,
+    "refusal_heuristic_rate": 0.94
+  },
+  "layer_matched_random_head_ablation": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "completion_chars_min": 0,
+    "completion_chars_median": 937.5,
+    "completion_chars_max": 1281,
+    "completion_words_median": 162.5,
+    "refusal_heuristic_count": 3,
+    "refusal_heuristic_rate": 0.03
+  },
+  "paired_baseline_vs_safety": {
+    "common_ids": 100,
+    "identical_completions": 0,
+    "different_completions": 100,
+    "baseline_refusal_safety_nonrefusal": 86,
+    "baseline_nonrefusal_safety_refusal": 0,
+    "both_refusal": 8,
+    "neither_refusal": 6
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-05-21T14:29:55.566288+00:00",
+  "baseline_path": "runs/03-baseline/completions_baseline.jsonl",
+  "ablation_path": "runs/04-safety-head-ablation-top3/completions_safety_head_ablation_top3.jsonl",
+  "baseline": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      false
+    ],
+    "n_ablated_heads_values": [],
+    "completion_chars_min": 648,
+    "completion_chars_median": 1123.5,
+    "completion_chars_max": 1282,
+    "completion_words_median": 173.5,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 94,
+    "refusal_heuristic_rate": 0.94
+  },
+  "safety_head_ablation_top3": {
+    "n": 100,
+    "mask_cfg_active_values": [
+      true
+    ],
+    "n_ablated_heads_values": [
+      3
+    ],
+    "completion_chars_min": 222,
+    "completion_chars_median": 1102.0,
+    "completion_chars_max": 1326,
+    "completion_words_median": 176.5,
+    "empty_completion_count": 0,
+    "empty_completion_ids": [],
+    "refusal_heuristic_count": 66,
+    "refusal_heuristic_rate": 0.66
+  },
+  "paired": {
+    "common_ids": 100,
+    "identical_completions": 0,
+    "different_completions": 100,
+    "baseline_refusal_ablation_nonrefusal": 29,
+    "baseline_nonrefusal_ablation_refusal": 1,
+    "both_refusal": 65,
+    "neither_refusal": 5,
+    "common_prefix_chars_median": 3.0,
+    "common_prefix_chars_max": 182
+  }
+}
