@@ -1,0 +1,30 @@
+# Tracker Exp 7 step 3a: ablate top-10 SHIPS heads on BeaverTails.
+tracker:
+  experiment: 7
+  run: safety_head_ablation_beavertails
+  status: runnable
+seed: 0
+condition: safety_head_ablation
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  n_per_category: 10
+heads:
+  source: file
+  path: runs/07-ships-beavertails/ships_dataset_ranking.json
+  top_k: 10
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/09-beaver-safety-ablation

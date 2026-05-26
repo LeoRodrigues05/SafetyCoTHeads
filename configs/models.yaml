@@ -23,3 +23,13 @@ judge_llama3_8b:
   load_in_4bit: true
   device_map: auto
   trust_remote_code: false
+
+# ~30B-scale judge. Qwen2.5-32B-Instruct in NF4 fits a single 32 GB GPU
+# (~17 GB weights + activations) and matches the scale of Granite-4.1-30B used
+# by the collaborator's setup. Apache-2.0 licensed.
+judge_qwen2_5_32b:
+  name: Qwen/Qwen2.5-32B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+  trust_remote_code: false

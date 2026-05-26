@@ -1,0 +1,23 @@
+# Tracker Exp 7 step 2: baseline generation on BeaverTails.
+tracker:
+  experiment: 7
+  run: baseline_generation_beavertails
+  status: runnable
+seed: 0
+condition: baseline
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  n_per_category: 10
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+system_prompt: null
+output:
+  dir: runs/08-beaver-baseline

@@ -9,6 +9,10 @@ more than ablating arbitrary or layer-matched random heads.
 
 - `configs/experiments/exp03_safety_vs_random_ablation/03-baseline.yaml`
 - `configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation.yaml`
+- `configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top1.yaml`
+- `configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top3.yaml`
+- `configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top5.yaml`
+- `configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top8.yaml`
 - `configs/experiments/exp03_safety_vs_random_ablation/05-random-head-ablation.yaml`
 - `configs/experiments/exp03_safety_vs_random_ablation/06-layer-matched-random.yaml`
 - Optional sweep: `configs/experiments/exp03_safety_vs_random_ablation/matrix.yaml`
@@ -27,6 +31,36 @@ python -m scripts.run_generation \
 
 python -m scripts.run_generation \
   --config configs/experiments/exp03_safety_vs_random_ablation/06-layer-matched-random.yaml
+```
+
+### Safety-head dose sweep
+
+The top-10 safety-head run can over-degrade generation. To inspect smaller
+interventions, run the top-1, top-3, top-5, and top-8 safety-head configs:
+
+```bash
+python -m scripts.run_generation --config configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top1.yaml
+python -m scripts.run_generation --config configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top3.yaml
+python -m scripts.run_generation --config configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top5.yaml
+python -m scripts.run_generation --config configs/experiments/exp03_safety_vs_random_ablation/04-safety-head-ablation-top8.yaml
+```
+
+To run all four and generate the same side-by-side response reports used for
+the top-10 check:
+
+```bash
+bash scripts/run_safety_head_dose_sweep.sh
+```
+
+The report script can also be run manually for a single condition:
+
+```bash
+python -m scripts.make_pre_post_report \
+  --baseline runs/03-baseline/completions_baseline.jsonl \
+  --ablation runs/04-safety-head-ablation-top1/completions_safety_head_ablation_top1.jsonl \
+  --ablation-label safety_head_ablation_top1 \
+  --out-dir runs/analysis/safety_head_pre_post_top1 \
+  --title "Safety Head Ablation Top-1: Pre/Post Responses"
 ```
 
 ## Code Paths
@@ -54,6 +88,11 @@ python -m scripts.run_generation \
 `runs/01-ships-discovery/ships_dataset_ranking.json`, builds one mask config,
 and keeps it active for the whole `model.generate(...)` call.
 
+`safety_head_ablation_top1`, `top3`, `top5`, and `top8` read the same SHIPS
+ranking but use smaller `heads.top_k` values. New generation rows record
+`n_ablated_heads` and `ablated_heads` so the exact intervention is visible in
+the output artifact.
+
 `random_head_ablation` samples 10 heads uniformly over the full layer/head grid
 with seed 0.
 
@@ -68,8 +107,14 @@ All ablation runs use `mask_qkv: [q]`, `mask_type: scale_mask`, and
 
 - `runs/03-baseline/completions_baseline.jsonl`
 - `runs/04-safety-head-ablation/completions_safety_head_ablation.jsonl`
+- `runs/04-safety-head-ablation-top1/completions_safety_head_ablation_top1.jsonl`
+- `runs/04-safety-head-ablation-top3/completions_safety_head_ablation_top3.jsonl`
+- `runs/04-safety-head-ablation-top5/completions_safety_head_ablation_top5.jsonl`
+- `runs/04-safety-head-ablation-top8/completions_safety_head_ablation_top8.jsonl`
 - `runs/05-random-head-ablation/completions_random_head_ablation.jsonl`
 - `runs/06-layer-matched-random/completions_layer_matched_random_head_ablation.jsonl`
+- `runs/analysis/safety_head_pre_post_top*/` for dose-sweep side-by-side
+  reports after `scripts/make_pre_post_report.py` runs.
 
 ## Review Checks
 

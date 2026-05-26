@@ -1,4 +1,4 @@
-from .beaver import CATEGORIES, load_beavertails
+from .beaver import CATEGORIES, load_beavertails, load_beavertails_judge_examples
 from .benign import load_alpaca, load_gsm8k, load_mmlu, load_wikitext
 from .coherence import load_coherence_prompts
 from .jailbreakbench import load_jailbreakbench
@@ -7,7 +7,8 @@ from .maliciousinstruct import load_maliciousinstruct
 
 __all__ = [
     "CATEGORIES",
-    "load_beavertails", "load_alpaca", "load_gsm8k", "load_mmlu", "load_wikitext",
+    "load_beavertails", "load_beavertails_judge_examples",
+    "load_alpaca", "load_gsm8k", "load_mmlu", "load_wikitext",
     "load_coherence_prompts", "load_jailbreakbench", "load_maliciousinstruct",
     "data_root", "take",
 ]

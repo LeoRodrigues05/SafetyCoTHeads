@@ -20,6 +20,8 @@ run configs grouped by the tracker experiment they support.
 - `docs/ExperimentTracker.md` defines the research plan and experiment names.
 - `configs/experiments/exp*/` defines the concrete run configs.
 - The `tracker:` block in each YAML maps that run back to the tracker.
+- `configs/experiments/README.md` lists each YAML's owning experiment and
+  clarifies cross-experiment consumers such as the shared judge config.
 
 Current caveat: `scripts/run_attribution.py` dispatches only `ships` and
 `sahara`. Coherency and quality attribution modules exist, but their configs are

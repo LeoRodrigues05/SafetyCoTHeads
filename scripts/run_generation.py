@@ -131,13 +131,27 @@ def main() -> int:
         )
 
     decoding = DecodingConfig(**(cfg.get("decoding") or {}))
+    extra_meta = {"config_path": str(args.config)}
+    if heads is not None:
+        mcfg = cfg.get("mask") or {}
+        extra_meta.update({
+            "ablated_heads": [
+                {"layer": int(layer), "head": int(head)}
+                for layer, head in heads
+            ],
+            "n_ablated_heads": len(heads),
+            "mask_qkv": list(mcfg.get("mask_qkv", ["q"])),
+            "mask_type": mcfg.get("mask_type", "scale_mask"),
+            "scale_factor": float(mcfg.get("scale_factor", 1e-4)),
+        })
+
     out_rows = generate(
         lm, rows, decoding,
         mask_cfg=mask_cfg,
         system_prompt=cfg.get("system_prompt"),
         batch_size=int(cfg.get("batch_size", 4)),
         condition_label=cfg.condition,
-        extra_meta={"config_path": str(args.config)},
+        extra_meta=extra_meta,
     )
     jsonl_write(out_dir / f"completions_{cfg.condition}.jsonl", out_rows)
     log.info("wrote %d completions to %s", len(out_rows), out_dir)

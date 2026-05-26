@@ -1,0 +1,30 @@
+# Tracker Exp 7 step 4: BeaverTails dual-score judge (coherence /10 + malicious_intent /10).
+# Uses Qwen2.5-32B-Instruct in 4-bit. Drop batch_size to 2 if you OOM at 4.
+tracker:
+  experiment: 7
+  run: beavertails_judge
+  status: runnable
+model:
+  name: Qwen/Qwen2.5-32B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+kind: beavertails
+max_new_tokens: 384
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+batch_size: 4
+use_chat_template: true
+seed: 0
+n_limit: null
+# Few-shot calibration: pulls a small balanced set of (prompt, response, is_safe)
+# rows from each BeaverTails CSV and renders them as JSON demonstrations
+# before the actual prompt. Keep it small to leave room in the context window.
+fewshot:
+  enabled: true
+  source: beavertails
+  n_per_category: 1
+  balance_safe: true
+  seed: 0
+  max_examples: 8

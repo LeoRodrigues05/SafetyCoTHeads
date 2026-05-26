@@ -165,7 +165,10 @@ head: 0}, ...]'`.)
 ### Step 5 — Judge all generations
 
 ```bash
-# Per-condition; repeat for every completions_*.jsonl produced above
+# Per-condition; repeat for every completions_*.jsonl produced above.
+# The judge config belongs to Exp 2; the completions paths belong to the
+# generation experiments that produced them, e.g. runs/03-baseline comes from
+# configs/experiments/exp03_safety_vs_random_ablation/03-baseline.yaml.
 python -m scripts.run_judge \
     --config configs/experiments/exp02_judge_pipeline/judge.yaml \
     --completions runs/03-baseline/completions_baseline.jsonl \

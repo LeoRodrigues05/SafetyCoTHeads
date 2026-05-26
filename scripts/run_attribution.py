@@ -18,7 +18,7 @@ from safety_cot_heads.attribution import (
     aggregate_dataset_ranking, safety_head_attribution,
 )
 from safety_cot_heads.data import (
-    load_jailbreakbench, load_maliciousinstruct,
+    load_beavertails, load_jailbreakbench, load_maliciousinstruct,
 )
 from safety_cot_heads.models import load_model
 from safety_cot_heads.utils import (
@@ -28,9 +28,14 @@ from safety_cot_heads.utils import (
 log = get_logger(__name__)
 
 
-def _load_dataset(name: str, split_n: int | None):
+def _load_dataset(name: str, split_n: int | None, **kw):
     if name == "maliciousinstruct": return load_maliciousinstruct(n=split_n)
     if name == "jailbreakbench":    return load_jailbreakbench(n=split_n)
+    if name == "beavertails":
+        return load_beavertails(
+            categories=kw.get("categories"),
+            n_per_category=kw.get("n_per_category"),
+        )
     raise ValueError(f"unknown attribution dataset {name!r}")
 
 
@@ -47,7 +52,12 @@ def main() -> int:
     ensure_dir(out_dir)
 
     method = cfg.method                                                       # "ships" | "sahara"
-    rows = _load_dataset(cfg.dataset.name, cfg.dataset.get("n"))
+    rows = _load_dataset(
+        cfg.dataset.name,
+        cfg.dataset.get("n"),
+        categories=cfg.dataset.get("categories"),
+        n_per_category=cfg.dataset.get("n_per_category"),
+    )
     log.info("loaded %d prompts from %s", len(rows), cfg.dataset.name)
 
     if args.dry_run:

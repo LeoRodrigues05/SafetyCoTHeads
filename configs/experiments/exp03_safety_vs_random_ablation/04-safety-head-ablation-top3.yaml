@@ -1,0 +1,31 @@
+# Tracker Exp 3: Safety-Head vs Random-Head Ablation
+# Run: ablate top-3 SHIPS heads, then generate on JailbreakBench.
+tracker:
+  experiment: 3
+  run: safety_head_ablation_top3
+  status: runnable
+seed: 0
+condition: safety_head_ablation_top3
+model:
+  name: meta-llama/Llama-2-7b-chat-hf
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+heads:
+  source: file
+  path: runs/01-ships-discovery/ships_dataset_ranking.json
+  top_k: 3
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 256
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/04-safety-head-ablation-top3

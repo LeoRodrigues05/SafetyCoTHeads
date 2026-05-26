@@ -1,0 +1,220 @@
+FAILURE-MODE ATLAS — PLAIN-LANGUAGE PLAN
+==========================================
+
+(A version of the full plan written in simple words, suitable for
+pasting into slides, emails, or a non-technical brief.)
+
+
+WHAT IS THE QUESTION?
+---------------------
+
+Researchers have invented many different ways to find the parts of a
+language model that handle safety. Some look at attention heads. Some
+look at single neurons. Some learn a mask over a whole circuit. Some
+compute a "direction in activation space" and push the model along it.
+
+All these methods report a number called ASR — the attack-success rate,
+i.e. how often the model gives in to a jailbreak prompt after you
+intervene. The methods are usually compared only on this one number.
+
+Our question is simple: if two methods reach the same ASR, does the
+model actually break in the same way? Or do different methods damage
+different parts of the model's reasoning, leading to subtly different
+failure styles that ASR cannot see?
+
+
+WHY DOES IT MATTER?
+-------------------
+
+If all four method families break the model the same way, then they are
+basically interchangeable and the choice of method does not matter.
+
+If they break the model in different ways, then:
+  - the "safety circuit" inside the model is not one thing, it has
+    multiple components,
+  - each method only targets one component,
+  - papers that claim to have "found the safety circuit" are overclaiming,
+  - future safety work needs to choose its method based on which kind of
+    failure it cares about.
+
+
+WHAT IS NEW?
+------------
+
+Three things:
+
+  (1) We compare four method families on the SAME prompts, the SAME
+      models, with the SAME judge — under TWO matching protocols
+      (matched final-answer ASR, AND matched perturbation size).
+      Nobody has done this.
+
+  (2) We look not just at the final answer but at the whole chain of
+      thought, broken down into seven measurable properties (e.g. how
+      much of the response is reasoning, how often the model
+      contradicts itself, how often it invents a benign motive for
+      the user). This is the "trajectory fingerprint".
+
+  (3) We run the experiment both on a normal instruction-tuned model
+      (Llama-3.1-8B-Instruct) and on a reasoning model that produces
+      explicit <think> blocks (DeepSeek-R1-Distill-Llama-8B). Reasoning
+      models are new and almost nobody has studied how safety
+      interventions interact with their long internal monologues.
+
+
+WHICH METHODS ARE COMPARED?
+---------------------------
+
+  1. ATTENTION HEADS — what our project already does (SHIPS + Sahara).
+  2. NEURONS — single MLP neurons identified by contrasting harmful
+     vs. benign prompts (Chen et al., NeurIPS 2025).
+  3. LEARNED CIRCUITS — a mask trained over heads and neurons together
+     to maximise unsafe behaviour with minimal disruption (SafeSeek).
+  4. STEERING VECTORS — two directions in activation space:
+       v_H = "the model recognises this is harmful"
+       v_R = "the model is going to refuse"
+     The DSH paper (Wu et al.) argues these are different things. We
+     test whether their difference shows up in the model's actual
+     generations, not just in its hidden states.
+
+
+HOW DO WE KNOW IF THE METHODS REALLY ARE DIFFERENT?
+---------------------------------------------------
+
+A subtle problem: even if our radar plots look different by eye, that
+might just be noise. So we use a clean statistical test, fixed in
+advance:
+
+  - For every (prompt, intervention) we compute a 7-number vector
+    describing the trajectory.
+  - We hide some prompts as a held-out test set.
+  - We train a small classifier (random forest) to look at one of
+    these vectors and guess which intervention produced it.
+  - If the classifier scores above a pre-registered threshold (AUC
+    of 0.75) on the held-out prompts, the fingerprints really are
+    distinct. If not, the central claim fails.
+
+This is called an "a-priori classifier-AUC test". A-priori = the
+threshold is decided before we run the experiment, so we cannot
+cheat by picking a number that happens to look good after the fact.
+
+This test is on top of, not instead of, the usual LLM-as-judge
+evaluation. The judge gives us the 7 numbers; the classifier tells
+us whether those 7 numbers actually carry method-identifying
+information.
+
+
+WHAT MAKES THE PLAN TRUSTWORTHY?
+--------------------------------
+
+  - 500 sentences hand-labelled by three humans. The LLM judge is
+    checked against the human labels. Any metric where the judge
+    disagrees with humans too often (Cohen's kappa below 0.70) is
+    dropped from the paper.
+
+  - Two judges, not one — Qwen-2.5-32B and a second model trained
+    without safety RLHF — to catch judge bias.
+
+  - Five generation seeds per (prompt, condition), not three. Same
+    seeds reused across conditions for the same prompt (paired
+    design) for tighter statistics.
+
+  - Two ways of matching methods: matched ASR (output fairness) and
+    matched perturbation magnitude (input fairness). Both reported.
+
+  - Random-head and layer-matched-random controls at every band to
+    prove that "any ablation" does not produce the same fingerprint.
+
+  - Pre-registration: all primary tests and thresholds written down
+    and committed to git before any expensive runs.
+
+  - Benign-task controls (MMLU, GSM8K, AlpacaEval) report how much
+    each method damages general capability, not just safety.
+
+
+PHASES
+------
+
+  Phase 0 — Pre-registration and feasibility gates.
+    Confirm the DSH code and SafeSeek code work; confirm
+    AmbiguityBench is available (or use a fallback); freeze the
+    annotation schema; do the power calculation.
+
+  Phase 1 — Build the measurement stack.
+    Port SHIPS to Llama-3.1; build the sentence-level judge; collect
+    the 500 human-labelled sentences; build the R1-Distill <think>
+    adapter; build the template-anchoring diagnostic.
+
+  Phase 2 — Implement the three new interventions.
+    Safety neurons (Chen). SafeSeek mask. DSH steering vectors with
+    length-matched completion pairs and layer selection.
+
+  Phase 3 — Calibrate and run the main sweep.
+    Tune strengths so methods are matched on ASR and on magnitude.
+    Generate 5 seeds for every (prompt, condition).
+
+  Phase 4 — Analysis, figures, write-up.
+    Mixed-effects regression, paired bootstrap, FDR. The classifier
+    test. The DSH dissociation test. Five headline figures.
+
+
+WHAT COULD GO WRONG (AND THE FIX)
+---------------------------------
+
+  - "Qualitatively distinct" is too fuzzy.
+    → Replaced with the classifier-AUC test.
+
+  - R1-Distill writes <think>...</think> instead of normal sentences.
+    → Different metric suite for R1; never pool with Llama.
+
+  - Matching on ASR is not the same as making methods comparable.
+    → Also match on perturbation magnitude; report both.
+
+  - LLM-as-judge for vague labels like "intention invention" can be
+    unreliable.
+    → Dual judge, human gold-set, and any metric with low agreement
+      is dropped.
+
+  - SafeSeek is trained on the harmful data; the other three are
+    not. Unfair comparison.
+    → SafeSeek is reported as a case study, not as the fourth direct
+      competitor.
+
+  - Steering vector v_R might just capture "longer responses" rather
+    than "refusal".
+    → Length-matched, content-controlled completion pairs; bootstrap
+      stability check.
+
+  - Only one reasoning model means we cannot statistically test the
+    "reasoning models behave differently" claim.
+    → Either add a second reasoning model, or weaken the claim to a
+      case study. (Open question for the author.)
+
+
+HEADLINE OUTPUTS
+----------------
+
+  Figure 1 — the atlas heatmap (intervention × trajectory metric).
+  Figure 2 — radar plots of each intervention's fingerprint.
+  Figure 3 — v_H vs v_R double-dissociation scatter.
+  Figure 4 — template-anchoring stratification.
+  Figure 5 — reasoning vs instruction-tuned panel.
+
+  Classifier-AUC report.
+  Judge-vs-human reliability table.
+  Iso-ASR vs iso-magnitude robustness panel.
+  Benign-task selectivity table.
+
+
+WHAT THIS PLAN IS NOT
+---------------------
+
+  - Not a new safety method or defence.
+  - Not a study of vision-language models or mixture-of-experts.
+  - Not human-red-team work.
+  - Not a fine-tuning intervention.
+  - Not a scaling study (everything is 7–8B parameters).
+
+It is an observational, comparative study designed to settle the
+question: "do these four method families actually do the same thing,
+or different things?" — with statistical machinery strong enough that
+the answer is defensible and pre-registered.

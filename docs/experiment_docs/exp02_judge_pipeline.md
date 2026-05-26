@@ -9,6 +9,12 @@ conditions can be compared on safety behavior.
 
 - `configs/experiments/exp02_judge_pipeline/judge.yaml`
 
+This is the only YAML owned by Experiment 2.  The judge pipeline consumes
+completion files produced by generation experiments, but those generation
+configs stay with their owning experiments.  For example,
+`runs/03-baseline/completions_baseline.jsonl` is produced by
+`configs/experiments/exp03_safety_vs_random_ablation/03-baseline.yaml`.
+
 ## Command Pattern
 
 ```bash

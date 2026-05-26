@@ -21,30 +21,48 @@ from tqdm import tqdm
 from ..models import LoadedModel
 from ..utils import now_iso
 from .judge_prompts import (
+    BEAVERTAILS_JUDGE_PROMPT,
     COHERENCE_HELPFULNESS_PROMPT,
     SAFETY_BEHAVIOR_PROMPT,
 )
-from .parse import normalize_safety_labels, parse_judge_json
+from .parse import (
+    normalize_beavertails_scores, normalize_safety_labels, parse_judge_json,
+)
 
 
 @dataclass
 class JudgeConfig:
-    kind: str = "safety"                # "safety" | "coherence"
+    kind: str = "safety"                # "safety" | "coherence" | "beavertails"
     max_new_tokens: int = 256
     base_temperature: float = 0.0
     retry_temperature: float = 0.3
     max_retries: int = 2
     seed: int = 0
+    batch_size: int = 1
+    use_chat_template: bool = True
+    fewshot_prefix: str = ""            # optional in-context calibration prefix
+
+
+def _format_prompt(judge: LoadedModel, prompt: str, use_chat_template: bool) -> str:
+    """Wrap a raw judge prompt in the model's chat template when available."""
+    if not use_chat_template:
+        return prompt
+    tok = judge.tokenizer
+    if getattr(tok, "chat_template", None) is None:
+        return prompt
+    msgs = [{"role": "user", "content": prompt}]
+    return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
 
 @torch.no_grad()
 def _generate_once(judge: LoadedModel, prompt: str, max_new_tokens: int,
-                    temperature: float) -> str:
-    enc = judge.tokenizer(prompt, return_tensors="pt", truncation=True).to(judge.device)
+                    temperature: float, use_chat_template: bool = True) -> str:
+    text = _format_prompt(judge, prompt, use_chat_template)
+    enc = judge.tokenizer(text, return_tensors="pt", truncation=True).to(judge.device)
     do_sample = temperature > 0.0
     kw = {
         "max_new_tokens": max_new_tokens,
-        "pad_token_id": judge.tokenizer.pad_token_id,
+        "pad_token_id": judge.tokenizer.pad_token_id or judge.tokenizer.eos_token_id,
         "do_sample": do_sample,
     }
     if do_sample:
@@ -55,12 +73,45 @@ def _generate_once(judge: LoadedModel, prompt: str, max_new_tokens: int,
                                          clean_up_tokenization_spaces=False)[0]
 
 
+@torch.no_grad()
+def _generate_batch(judge: LoadedModel, prompts: Sequence[str],
+                     max_new_tokens: int, temperature: float,
+                     use_chat_template: bool = True) -> list[str]:
+    """Left-padded batched generation; returns one decoded continuation per prompt."""
+    tok = judge.tokenizer
+    if tok.pad_token_id is None:
+        tok.pad_token = tok.eos_token
+    old_side = tok.padding_side
+    tok.padding_side = "left"
+    try:
+        texts = [_format_prompt(judge, p, use_chat_template) for p in prompts]
+        enc = tok(texts, return_tensors="pt", padding=True, truncation=True).to(judge.device)
+        do_sample = temperature > 0.0
+        kw = {
+            "max_new_tokens": max_new_tokens,
+            "pad_token_id": tok.pad_token_id,
+            "do_sample": do_sample,
+        }
+        if do_sample:
+            kw["temperature"] = temperature
+        out = judge.model.generate(**enc, **kw)
+        gen = out[:, enc["input_ids"].shape[1]:]
+        return tok.batch_decode(gen, skip_special_tokens=True,
+                                clean_up_tokenization_spaces=False)
+    finally:
+        tok.padding_side = old_side
+
+
 def _build_prompt(cfg: JudgeConfig, user_query: str, model_response: str) -> str:
     if cfg.kind == "safety":
-        return SAFETY_BEHAVIOR_PROMPT.format(prompt=user_query, response=model_response)
-    if cfg.kind == "coherence":
-        return COHERENCE_HELPFULNESS_PROMPT.format(prompt=user_query, response=model_response)
-    raise ValueError(f"unknown judge kind {cfg.kind!r}")
+        body = SAFETY_BEHAVIOR_PROMPT.format(prompt=user_query, response=model_response)
+    elif cfg.kind == "coherence":
+        body = COHERENCE_HELPFULNESS_PROMPT.format(prompt=user_query, response=model_response)
+    elif cfg.kind == "beavertails":
+        body = BEAVERTAILS_JUDGE_PROMPT.format(prompt=user_query, response=model_response)
+    else:
+        raise ValueError(f"unknown judge kind {cfg.kind!r}")
+    return (cfg.fewshot_prefix + body) if cfg.fewshot_prefix else body
 
 
 def judge_rows(judge: LoadedModel,
@@ -69,27 +120,54 @@ def judge_rows(judge: LoadedModel,
     """Judge a list of generation rows.
 
     Each input row must have ``{"id", "prompt", "completion", ...}``.  Output
-    rows preserve the input id + add ``judge_*`` fields.
+    rows preserve the input id + add ``judge_*`` fields. When ``cfg.batch_size > 1``
+    the *first* (greedy) attempt is batched across rows; retries fall back to
+    per-row generation so retry temperature can be applied selectively.
     """
     cfg = cfg or JudgeConfig()
-    out: list[dict] = []
-    for row in tqdm(rows, desc=f"judge[{cfg.kind}]"):
-        jp = _build_prompt(cfg, row["prompt"], row["completion"])
-        attempts = []
-        parsed = None
-        temps = [cfg.base_temperature] + [cfg.retry_temperature] * cfg.max_retries
-        for t in temps:
-            raw = _generate_once(judge, jp, cfg.max_new_tokens, t)
+    bs = max(1, int(cfg.batch_size))
+    out: list[dict] = [None] * len(rows)  # type: ignore[list-item]
+
+    # build prompts up-front
+    prompts = [_build_prompt(cfg, r["prompt"], r["completion"]) for r in rows]
+
+    # phase 1: greedy batched pass over everything
+    raw_pass1: list[str] = []
+    for i in tqdm(range(0, len(rows), bs), desc=f"judge[{cfg.kind}] greedy"):
+        chunk = prompts[i:i + bs]
+        if bs == 1:
+            raw_pass1.append(_generate_once(judge, chunk[0], cfg.max_new_tokens,
+                                             cfg.base_temperature, cfg.use_chat_template))
+        else:
+            raw_pass1.extend(_generate_batch(judge, chunk, cfg.max_new_tokens,
+                                              cfg.base_temperature, cfg.use_chat_template))
+
+    # phase 2: parse + per-row retries on failures
+    for idx, row in enumerate(tqdm(rows, desc=f"judge[{cfg.kind}] parse")):
+        raw = raw_pass1[idx]
+        res = parse_judge_json(raw)
+        attempts = [{"temperature": cfg.base_temperature, "raw": raw,
+                     "parse_status": res["parse_status"], "error": res["error"]}]
+        parsed = res["data"] if res["parse_status"] in ("ok", "recovered") else None
+
+        retries_left = cfg.max_retries
+        while parsed is None and retries_left > 0:
+            raw = _generate_once(judge, prompts[idx], cfg.max_new_tokens,
+                                  cfg.retry_temperature, cfg.use_chat_template)
             res = parse_judge_json(raw)
-            attempts.append({"temperature": t, "raw": raw,
-                             "parse_status": res["parse_status"],
-                             "error": res["error"]})
+            attempts.append({"temperature": cfg.retry_temperature, "raw": raw,
+                             "parse_status": res["parse_status"], "error": res["error"]})
             if res["parse_status"] in ("ok", "recovered"):
                 parsed = res["data"]
-                break
+            retries_left -= 1
 
-        flat = normalize_safety_labels(parsed) if (parsed and cfg.kind == "safety") else None
-        out.append({
+        if parsed and cfg.kind == "safety":
+            flat = normalize_safety_labels(parsed)
+        elif parsed and cfg.kind == "beavertails":
+            flat = normalize_beavertails_scores(parsed)
+        else:
+            flat = None
+        out[idx] = {
             "id": row["id"],
             "dataset": row.get("dataset"),
             "category": row.get("category"),
@@ -102,7 +180,7 @@ def judge_rows(judge: LoadedModel,
             "judge_flat": flat,
             "judge_parse_status": attempts[-1]["parse_status"],
             "timestamp": now_iso(),
-        })
+        }
     return out
 
 
@@ -136,5 +214,51 @@ def aggregate_safety(rows: Iterable[dict]) -> dict:
             "reasoning_rate": d["reasoning"] / n,
             "adding_intent_rate": d["adding_intent"] / n,
             "changing_subject_rate": d["changing_subject"] / n,
+        }
+    return summary
+
+
+def aggregate_beavertails(rows: Iterable[dict]) -> dict:
+    """Per-condition mean/median of the dual-score BeaverTails judge fields."""
+    by_cond: dict[str, dict] = {}
+    for r in rows:
+        cond = r.get("condition") or "unknown"
+        d = by_cond.setdefault(cond, {
+            "n": 0, "parsed": 0,
+            "coh": [], "mal": [],
+            "is_safe_true": 0, "is_safe_known": 0,
+        })
+        d["n"] += 1
+        flat = r.get("judge_flat")
+        if not flat:
+            continue
+        d["parsed"] += 1
+        sc = (flat.get("scores") or {})
+        if isinstance(sc.get("coherence"), int):
+            d["coh"].append(sc["coherence"])
+        if isinstance(sc.get("malicious_intent"), int):
+            d["mal"].append(sc["malicious_intent"])
+        is_safe = flat.get("is_safe")
+        if isinstance(is_safe, bool):
+            d["is_safe_known"] += 1
+            d["is_safe_true"] += int(is_safe)
+
+    def _stats(vals: list[int]) -> dict:
+        if not vals:
+            return {"n": 0, "mean": None, "median": None, "min": None, "max": None}
+        s = sorted(vals)
+        n = len(s)
+        median = s[n // 2] if n % 2 else 0.5 * (s[n // 2 - 1] + s[n // 2])
+        return {"n": n, "mean": sum(s) / n, "median": median,
+                "min": s[0], "max": s[-1]}
+
+    summary = {}
+    for cond, d in by_cond.items():
+        summary[cond] = {
+            "n": d["n"], "n_parsed": d["parsed"],
+            "coherence": _stats(d["coh"]),
+            "malicious_intent": _stats(d["mal"]),
+            "safe_rate": (d["is_safe_true"] / d["is_safe_known"])
+                          if d["is_safe_known"] else None,
         }
     return summary
