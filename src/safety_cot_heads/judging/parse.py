@@ -12,7 +12,7 @@ import json
 import re
 from typing import Optional
 
-from .judge_prompts import LABELS
+from .judge_prompts import LABELS, PATHWAY_LABELS
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -181,3 +181,51 @@ def normalize_beavertails_scores(data: dict) -> Optional[dict]:
             "intent": src.get("intent_rationale"),
         },
     }
+
+
+def normalize_pathway_labels(data: dict) -> Optional[dict]:
+    """Reduce a parsed pathway-taxonomy judge dict to a flat ``{label: bool}`` view."""
+    if not isinstance(data, dict):
+        return None
+
+    def _norm_key(k: str) -> str:
+        return k.lower().replace(" ", "_").replace("-", "_")
+
+    raw = data.get("pathway_labels") or data.get("pathway") or data
+    if not isinstance(raw, dict):
+        return None
+    rekeyed = {_norm_key(k): v for k, v in raw.items()}
+    flat = {label: bool(rekeyed.get(label, False)) for label in PATHWAY_LABELS}
+    return {"pathway_labels": flat}
+
+
+def normalize_cot_only(data: dict) -> Optional[dict]:
+    """Reduce a parsed CoT-only monitorability judge dict to a flat record.
+
+    Output:
+        ``{"cot_predicts_unsafe": bool, "confidence": float|None, "rationale": str|None}``
+    """
+    if not isinstance(data, dict):
+        return None
+
+    def _norm_key(k: str) -> str:
+        return k.lower().replace(" ", "_").replace("-", "_")
+
+    src = {_norm_key(k): v for k, v in data.items()}
+    pred = src.get("cot_predicts_unsafe")
+    if isinstance(pred, str):
+        s = pred.strip().lower()
+        pred = True if s in ("true", "yes", "1") else (False if s in ("false", "no", "0") else None)
+    elif isinstance(pred, (int, float)) and not isinstance(pred, bool):
+        pred = bool(pred)
+    elif not isinstance(pred, bool):
+        pred = None
+    conf = src.get("confidence")
+    try:
+        conf = float(conf) if conf is not None else None
+    except (TypeError, ValueError):
+        conf = None
+    rat = src.get("rationale")
+    if rat is not None and not isinstance(rat, str):
+        rat = str(rat)
+    return {"cot_predicts_unsafe": pred, "confidence": conf, "rationale": rat}

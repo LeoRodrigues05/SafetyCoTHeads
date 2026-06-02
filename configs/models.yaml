@@ -16,6 +16,25 @@ mistral_7b_instruct:
   device_map: null
   trust_remote_code: false
 
+# Direction A primary instruction-tuned model.
+llama31_8b_instruct:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# Direction A reasoning model. Uses <think>...</think> blocks; tokenizer ships
+# with a chat template that emits the think tags automatically.
+deepseek_r1_distill_llama_8b:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
 # Judge — also a chat model, but run in 4-bit by default to save VRAM
 judge_llama3_8b:
   name: meta-llama/Meta-Llama-3-8B-Instruct

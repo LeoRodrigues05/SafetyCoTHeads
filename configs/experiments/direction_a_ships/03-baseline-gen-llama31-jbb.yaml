@@ -1,0 +1,27 @@
+# Direction A — baseline generation, Llama-3.1-8B-Instruct on JailbreakBench.
+#
+# Run twice via `--overrides seed=<n> decoding.seed=<n> decoding.do_sample=<bool>`
+# to obtain the two seeds for this slice. Defaults below describe seed=0
+# (greedy); seed=1 should set `decoding.do_sample=true decoding.temperature=0.7`.
+tracker:
+  experiment: direction_a
+  run: baseline_gen_llama31_jbb
+  status: runnable
+seed: 0
+condition: baseline
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+system_prompt: null
+output:
+  dir: runs/direction_a/03-baseline-llama31-jbb/seed0

@@ -9,11 +9,11 @@
 #SBATCH --error=logs/slurm/beavertails_dose_sweep-%j.err
 
 # Submit from the repo root:
-#   sbatch "scripts/sbatch scripts/beavertails_sweep_pipeline.sbatch"
+#   sbatch scripts/sbatch/beavertails_sweep_pipeline.sbatch
 #
 # Optional:
-#   BEAVERTAILS_TOP_KS="1 3 5 8" sbatch --export=ALL,BEAVERTAILS_TOP_KS "scripts/sbatch scripts/beavertails_sweep_pipeline.sbatch"
-#   sbatch "scripts/sbatch scripts/beavertails_sweep_pipeline.sbatch" --dry-run
+#   BEAVERTAILS_TOP_KS="1 3 5 8" sbatch --export=ALL,BEAVERTAILS_TOP_KS scripts/sbatch/beavertails_sweep_pipeline.sbatch
+#   sbatch scripts/sbatch/beavertails_sweep_pipeline.sbatch --dry-run
 
 set -euo pipefail
 cd /home/leo.rodrigues/SafetyAblation/safety_cot_heads

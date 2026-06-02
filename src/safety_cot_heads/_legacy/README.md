@@ -15,6 +15,6 @@ config-driven public API lives in the sibling packages
 (:mod:`safety_cot_heads.models`, :mod:`safety_cot_heads.attribution`, etc.)
 and re-uses these legacy implementations where it makes sense.
 
-See ``docs/MIGRATION.md`` and ``docs/PREVIOUS_CODE_MAP.md`` at
+See ``docs/general/MIGRATION.md`` and ``docs/general/PREVIOUS_CODE_MAP.md`` at
 the workspace root for the per-file mapping.
 """

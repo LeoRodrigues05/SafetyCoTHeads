@@ -22,6 +22,6 @@ Notebook-only tricks that were ported into the codebase:
 - Paired drop-and-realign by parse failure index — replaced by id-based join
   in `analysis.paired`.
 - Multi-seed random head sets `[7-7, 10-22, 20-29, 27-2, 29-26]` — still TODO;
-  see `docs/richer_evaluation.md` §11.
+  see `docs/general/richer_evaluation.md` §11.
 
 Do not modify the notebooks; they're read-only history.

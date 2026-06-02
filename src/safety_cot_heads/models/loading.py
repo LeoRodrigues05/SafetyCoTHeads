@@ -14,6 +14,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from ..utils.device import resolve_device
 from .custom_llama import HeadMaskController
+from .neuron_and_steer import NeuronMaskController, SteeringController
 
 
 @dataclass
@@ -21,6 +22,8 @@ class LoadedModel:
     model: torch.nn.Module
     tokenizer: object
     head_mask_controller: HeadMaskController
+    neuron_mask_controller: NeuronMaskController
+    steering_controller: SteeringController
     name: str
 
     @property
@@ -97,7 +100,15 @@ def load_model(
         model.config.pad_token_id = tok.pad_token_id
 
     ctrl = HeadMaskController.attach(model)
-    return LoadedModel(model=model, tokenizer=tok, head_mask_controller=ctrl, name=model_name)
+    nctrl = NeuronMaskController.attach(model)
+    sctrl = SteeringController.attach(model)
+    return LoadedModel(
+        model=model, tokenizer=tok,
+        head_mask_controller=ctrl,
+        neuron_mask_controller=nctrl,
+        steering_controller=sctrl,
+        name=model_name,
+    )
 
 
 def _resolve_dtype(dtype: str):

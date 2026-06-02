@@ -68,50 +68,67 @@ def main() -> int:
     n_limit = cfg.get("n_limit")
     if n_limit is not None:
         completions = completions[: int(n_limit)]
-    log.info("judging %d completions from %s", len(completions), args.completions)
+
+    # Resume support: if out_path already has rows, skip those ids and append.
+    already_done_ids: set = set()
+    if out_path.exists() and out_path.stat().st_size > 0 and not args.dry_run:
+        for r in jsonl_read(out_path):
+            rid = r.get("id")
+            if rid is not None:
+                already_done_ids.add(rid)
+        log.info("resume: %d rows already judged in %s; will skip them",
+                 len(already_done_ids), out_path)
+    pending = [r for r in completions if r.get("id") not in already_done_ids]
+    log.info("judging %d completions from %s (%d skipped via resume)",
+             len(pending), args.completions, len(completions) - len(pending))
 
     if args.dry_run:
         log.info("DRY-RUN: would load judge %s and process %d rows",
-                 cfg.model.name, len(completions))
+                 cfg.model.name, len(pending))
         plan = cfg_to_dict(cfg)
         # Surface few-shot info in the dryrun trace so it's reviewable without
         # spinning up the model.
         fewshot_prefix = _build_fewshot_prefix(cfg)
         plan["fewshot_prefix_chars"] = len(fewshot_prefix)
         json_dump(out_path.with_suffix(".dryrun.json"),
-                  {"plan": plan, "n": len(completions)})
+                  {"plan": plan, "n": len(pending)})
         return 0
 
-    judge = load_model(
-        cfg.model.name,
-        dtype=cfg.model.get("dtype", "auto"),
-        load_in_4bit=bool(cfg.model.get("load_in_4bit", False)),
-        device_map=cfg.model.get("device_map"),
-        trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
-    )
-    jcfg = JudgeConfig(
-        kind=cfg.get("kind", "safety"),
-        max_new_tokens=int(cfg.get("max_new_tokens", 256)),
-        base_temperature=float(cfg.get("base_temperature", 0.0)),
-        retry_temperature=float(cfg.get("retry_temperature", 0.3)),
-        max_retries=int(cfg.get("max_retries", 2)),
-        seed=int(cfg.get("seed", 0)),
-        batch_size=int(cfg.get("batch_size", 1)),
-        use_chat_template=bool(cfg.get("use_chat_template", True)),
-        fewshot_prefix=_build_fewshot_prefix(cfg),
-    )
-    rows = judge_rows(judge, completions, jcfg)
-    jsonl_write(out_path, rows)
-    if jcfg.kind == "safety":
-        summary = aggregate_safety(rows)
-    elif jcfg.kind == "beavertails":
-        summary = aggregate_beavertails(rows)
+    if not pending:
+        log.info("nothing to do; %d rows already on disk", len(already_done_ids))
+        rows_all = list(jsonl_read(out_path)) if out_path.exists() else []
+    else:
+        judge = load_model(
+            cfg.model.name,
+            dtype=cfg.model.get("dtype", "auto"),
+            load_in_4bit=bool(cfg.model.get("load_in_4bit", False)),
+            device_map=cfg.model.get("device_map"),
+            trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
+        )
+        jcfg = JudgeConfig(
+            kind=cfg.get("kind", "safety"),
+            max_new_tokens=int(cfg.get("max_new_tokens", 256)),
+            base_temperature=float(cfg.get("base_temperature", 0.0)),
+            retry_temperature=float(cfg.get("retry_temperature", 0.3)),
+            max_retries=int(cfg.get("max_retries", 2)),
+            seed=int(cfg.get("seed", 0)),
+            batch_size=int(cfg.get("batch_size", 1)),
+            use_chat_template=bool(cfg.get("use_chat_template", True)),
+            fewshot_prefix=_build_fewshot_prefix(cfg),
+        )
+        # Incremental append; resume-safe across SLURM kills.
+        judge_rows(judge, pending, jcfg, out_path=str(out_path))
+        rows_all = list(jsonl_read(out_path))
+    if cfg.get("kind", "safety") == "safety":
+        summary = aggregate_safety(rows_all)
+    elif cfg.get("kind", "safety") == "beavertails":
+        summary = aggregate_beavertails(rows_all)
     else:
         summary = {}
     json_dump(out_path.with_suffix(".summary.json"),
-              {"judge_model": judge.name, "judge_kind": jcfg.kind,
-               "summary": summary, "n_completions": len(rows)})
-    log.info("wrote %d judged rows to %s", len(rows), out_path)
+              {"judge_model": cfg.model.name, "judge_kind": cfg.get("kind", "safety"),
+               "summary": summary, "n_completions": len(rows_all)})
+    log.info("judged file now has %d rows at %s", len(rows_all), out_path)
     return 0
 
 

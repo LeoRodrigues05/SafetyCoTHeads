@@ -1,0 +1,34 @@
+# Direction A v4 — directional ablation steering, Llama-3.1-8B on JailbreakBench.
+# Default per Arditi et al. 2024 ("Refusal in LLMs is Mediated by a Single
+# Direction"): project the refusal direction out of the residual stream at
+# *every* layer for every token. The direction itself is the one extracted
+# at a chosen "best" layer; for Llama-3 8B mid-network layers work best —
+# we default to layer 14 (which is the 'default_layer' written by the
+# extraction script for a 32-layer model when no validation is supplied).
+tracker:
+  experiment: direction_a
+  run: steering_ablate_llama31_jbb
+  status: runnable
+seed: 0
+condition: steering_ablate
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+steering:
+  direction_path: runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz
+  layer: 14            # source layer of the direction vector
+  mode: ablate         # Arditi et al. default
+  alpha: 1.0
+  # Omitting `layers:` => apply the projection at ALL transformer layers.
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/direction_a/17-steering-ablate-llama31-jbb/seed0

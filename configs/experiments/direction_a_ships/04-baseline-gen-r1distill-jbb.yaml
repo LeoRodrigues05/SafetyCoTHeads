@@ -1,0 +1,24 @@
+# Direction A — baseline generation, DeepSeek-R1-Distill-Llama-8B on JailbreakBench.
+# Same dual-seed convention as the Llama config.
+tracker:
+  experiment: direction_a
+  run: baseline_gen_r1distill_jbb
+  status: runnable
+seed: 0
+condition: baseline
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: 100
+decoding:
+  max_new_tokens: 1024   # R1 needs space for the <think> block
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 2
+system_prompt: null
+output:
+  dir: runs/direction_a/04-baseline-r1distill-jbb/seed0

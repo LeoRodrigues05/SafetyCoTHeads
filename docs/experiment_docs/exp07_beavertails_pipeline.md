@@ -12,7 +12,7 @@ It mirrors the user-facing requirements:
 3. Generate completions pre and post ablation, then build the side-by-side HTML
    responses report.
 4. Compute final metrics and plots per the analysis recipe in
-   [docs/richer_evaluation.md](../richer_evaluation.md).
+   [docs/richer_evaluation.md](../general/richer_evaluation.md).
 
 ## Requirements
 
@@ -48,7 +48,7 @@ for a no-GPU dress rehearsal.
 Submit the end-to-end pipeline on Slurm from the repo root with:
 
 ```bash
-sbatch "scripts/sbatch scripts/beavertails_pipeline.sbatch"
+sbatch scripts/sbatch/beavertails_pipeline.sbatch
 ```
 
 The top-k BeaverTails dose sweep is separate. It reuses or creates the
@@ -56,13 +56,13 @@ BeaverTails SHIPS ranking and baseline judge, then runs safety-head,
 uniform-random, and layer-matched controls for each `k`.
 
 ```bash
-sbatch "scripts/sbatch scripts/beavertails_sweep_pipeline.sbatch"
+sbatch scripts/sbatch/beavertails_sweep_pipeline.sbatch
 ```
 
 Override the sweep values at submit time if needed:
 
 ```bash
-BEAVERTAILS_TOP_KS="1 3 5 8" sbatch --export=ALL,BEAVERTAILS_TOP_KS "scripts/sbatch scripts/beavertails_sweep_pipeline.sbatch"
+BEAVERTAILS_TOP_KS="1 3 5 8" sbatch --export=ALL,BEAVERTAILS_TOP_KS scripts/sbatch/beavertails_sweep_pipeline.sbatch
 ```
 
 ## Judge schema

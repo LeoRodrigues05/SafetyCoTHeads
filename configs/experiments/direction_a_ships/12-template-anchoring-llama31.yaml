@@ -1,0 +1,28 @@
+# Direction A — template-anchoring diagnostic (P1.5) for Llama-3.1.
+# Computes per-(layer, head) rho_tpl on the same MaliciousInstruct prompts
+# used by SHIPS discovery (config 01), then residualises the SHIPS ranking.
+#
+# Run:
+#   python -m scripts.run_template_anchoring \
+#     --config configs/experiments/direction_a_ships/12-template-anchoring-llama31.yaml \
+#     --ranking runs/direction_a/01-ships-discovery-llama31/ships_dataset_ranking.json
+tracker:
+  experiment: direction_a
+  run: template_anchoring_llama31
+  status: runnable
+seed: 0
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: maliciousinstruct
+  n: 100
+anchoring:
+  prompt_template: "## Query:{q}\n## Answer:"
+  extra_template_substrings: []
+  max_prompt_len: 1024
+  normalise: true
+ranking_score_key: score
+output:
+  dir: runs/direction_a/12-template-anchoring-llama31

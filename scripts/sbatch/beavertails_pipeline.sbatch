@@ -8,8 +8,8 @@
 #SBATCH --error=logs/slurm/beavertails_pipeline-%j.err
 
 # Submit, optionally pinning the node:
-#   sbatch "scripts/sbatch scripts/beavertails_pipeline.sbatch"
-#   sbatch --nodelist=<node-name> "scripts/sbatch scripts/beavertails_pipeline.sbatch"
+#   sbatch scripts/sbatch/beavertails_pipeline.sbatch
+#   sbatch --nodelist=<node-name> scripts/sbatch/beavertails_pipeline.sbatch
 
 set -euo pipefail
 cd /home/leo.rodrigues/SafetyAblation/safety_cot_heads

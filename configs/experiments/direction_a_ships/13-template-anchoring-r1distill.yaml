@@ -1,0 +1,21 @@
+# Direction A — template-anchoring diagnostic (P1.5) for R1-Distill.
+tracker:
+  experiment: direction_a
+  run: template_anchoring_r1distill
+  status: runnable
+seed: 0
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: maliciousinstruct
+  n: 100
+anchoring:
+  prompt_template: "## Query:{q}\n## Answer:"
+  extra_template_substrings: []
+  max_prompt_len: 1024
+  normalise: true
+ranking_score_key: score
+output:
+  dir: runs/direction_a/13-template-anchoring-r1distill

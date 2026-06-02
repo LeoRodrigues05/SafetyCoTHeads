@@ -127,4 +127,4 @@ harmful and remains capable of doing so).
 The code in `scripts/run_judge.py`, the gibberish filter in
 `safety_cot_heads.analysis.coherence`, and the pairwise comparison in
 `scripts/evaluate_ablation.py` are wired to produce exactly these numbers; see
-`docs/richer_evaluation.md` for the full proposed suite.
+`richer_evaluation.md` for the full proposed suite.

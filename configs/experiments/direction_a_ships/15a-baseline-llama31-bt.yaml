@@ -1,0 +1,25 @@
+# Direction A v4 — baseline generation, Llama-3.1-8B-Instruct on FULL BeaverTails (~7980 prompts).
+# Same decoding settings as the JBB baseline (03-baseline-gen-llama31-jbb.yaml).
+tracker:
+  experiment: direction_a
+  run: baseline_gen_llama31_bt
+  status: runnable
+seed: 0
+condition: baseline
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null          # all 14 categories
+  n_per_category: null      # full dataset (~570 prompts × 14 categories)
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+system_prompt: null
+output:
+  dir: runs/direction_a/15-baseline-llama31-bt/seed0

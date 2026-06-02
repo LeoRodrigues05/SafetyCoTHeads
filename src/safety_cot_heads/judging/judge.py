@@ -19,20 +19,23 @@ import torch
 from tqdm import tqdm
 
 from ..models import LoadedModel
-from ..utils import now_iso
+from ..utils import jsonl_append_one, now_iso
 from .judge_prompts import (
     BEAVERTAILS_JUDGE_PROMPT,
     COHERENCE_HELPFULNESS_PROMPT,
+    COT_ONLY_PREDICTION_PROMPT,
+    PATHWAY_TAXONOMY_PROMPT,
     SAFETY_BEHAVIOR_PROMPT,
 )
 from .parse import (
-    normalize_beavertails_scores, normalize_safety_labels, parse_judge_json,
+    normalize_beavertails_scores, normalize_cot_only,
+    normalize_pathway_labels, normalize_safety_labels, parse_judge_json,
 )
 
 
 @dataclass
 class JudgeConfig:
-    kind: str = "safety"                # "safety" | "coherence" | "beavertails"
+    kind: str = "safety"                # "safety" | "coherence" | "beavertails" | "pathway" | "cot_only"
     max_new_tokens: int = 256
     base_temperature: float = 0.0
     retry_temperature: float = 0.3
@@ -109,6 +112,10 @@ def _build_prompt(cfg: JudgeConfig, user_query: str, model_response: str) -> str
         body = COHERENCE_HELPFULNESS_PROMPT.format(prompt=user_query, response=model_response)
     elif cfg.kind == "beavertails":
         body = BEAVERTAILS_JUDGE_PROMPT.format(prompt=user_query, response=model_response)
+    elif cfg.kind == "pathway":
+        body = PATHWAY_TAXONOMY_PROMPT.format(prompt=user_query, response=model_response)
+    elif cfg.kind == "cot_only":
+        body = COT_ONLY_PREDICTION_PROMPT.format(prompt=user_query, response=model_response)
     else:
         raise ValueError(f"unknown judge kind {cfg.kind!r}")
     return (cfg.fewshot_prefix + body) if cfg.fewshot_prefix else body
@@ -116,71 +123,82 @@ def _build_prompt(cfg: JudgeConfig, user_query: str, model_response: str) -> str
 
 def judge_rows(judge: LoadedModel,
                rows: Sequence[dict],
-               cfg: Optional[JudgeConfig] = None) -> list[dict]:
+               cfg: Optional[JudgeConfig] = None,
+               *,
+               out_path: Optional[str] = None) -> list[dict]:
     """Judge a list of generation rows.
 
     Each input row must have ``{"id", "prompt", "completion", ...}``.  Output
     rows preserve the input id + add ``judge_*`` fields. When ``cfg.batch_size > 1``
     the *first* (greedy) attempt is batched across rows; retries fall back to
     per-row generation so retry temperature can be applied selectively.
+
+    When ``out_path`` is given, each judged row is appended to that JSONL file
+    immediately after it is produced, so a SLURM kill loses at most one chunk.
+    Resume is the caller's responsibility (filter ``rows`` against existing ids).
     """
     cfg = cfg or JudgeConfig()
     bs = max(1, int(cfg.batch_size))
-    out: list[dict] = [None] * len(rows)  # type: ignore[list-item]
+    out: list[dict] = []
 
-    # build prompts up-front
     prompts = [_build_prompt(cfg, r["prompt"], r["completion"]) for r in rows]
 
-    # phase 1: greedy batched pass over everything
-    raw_pass1: list[str] = []
-    for i in tqdm(range(0, len(rows), bs), desc=f"judge[{cfg.kind}] greedy"):
-        chunk = prompts[i:i + bs]
+    # Single chunked loop: greedy batch -> per-row parse+retries -> append now.
+    for i in tqdm(range(0, len(rows), bs), desc=f"judge[{cfg.kind}]"):
+        chunk_rows = rows[i:i + bs]
+        chunk_prompts = prompts[i:i + bs]
         if bs == 1:
-            raw_pass1.append(_generate_once(judge, chunk[0], cfg.max_new_tokens,
-                                             cfg.base_temperature, cfg.use_chat_template))
+            chunk_raw = [_generate_once(judge, chunk_prompts[0], cfg.max_new_tokens,
+                                         cfg.base_temperature, cfg.use_chat_template)]
         else:
-            raw_pass1.extend(_generate_batch(judge, chunk, cfg.max_new_tokens,
-                                              cfg.base_temperature, cfg.use_chat_template))
+            chunk_raw = _generate_batch(judge, chunk_prompts, cfg.max_new_tokens,
+                                         cfg.base_temperature, cfg.use_chat_template)
 
-    # phase 2: parse + per-row retries on failures
-    for idx, row in enumerate(tqdm(rows, desc=f"judge[{cfg.kind}] parse")):
-        raw = raw_pass1[idx]
-        res = parse_judge_json(raw)
-        attempts = [{"temperature": cfg.base_temperature, "raw": raw,
-                     "parse_status": res["parse_status"], "error": res["error"]}]
-        parsed = res["data"] if res["parse_status"] in ("ok", "recovered") else None
-
-        retries_left = cfg.max_retries
-        while parsed is None and retries_left > 0:
-            raw = _generate_once(judge, prompts[idx], cfg.max_new_tokens,
-                                  cfg.retry_temperature, cfg.use_chat_template)
+        for j, row in enumerate(chunk_rows):
+            raw = chunk_raw[j]
             res = parse_judge_json(raw)
-            attempts.append({"temperature": cfg.retry_temperature, "raw": raw,
-                             "parse_status": res["parse_status"], "error": res["error"]})
-            if res["parse_status"] in ("ok", "recovered"):
-                parsed = res["data"]
-            retries_left -= 1
+            attempts = [{"temperature": cfg.base_temperature, "raw": raw,
+                         "parse_status": res["parse_status"], "error": res["error"]}]
+            parsed = res["data"] if res["parse_status"] in ("ok", "recovered") else None
 
-        if parsed and cfg.kind == "safety":
-            flat = normalize_safety_labels(parsed)
-        elif parsed and cfg.kind == "beavertails":
-            flat = normalize_beavertails_scores(parsed)
-        else:
-            flat = None
-        out[idx] = {
-            "id": row["id"],
-            "dataset": row.get("dataset"),
-            "category": row.get("category"),
-            "condition": row.get("condition"),
-            "model": row.get("model"),
-            "judge_model": judge.name,
-            "judge_kind": cfg.kind,
-            "judge_attempts": attempts,
-            "judge_parsed": parsed,
-            "judge_flat": flat,
-            "judge_parse_status": attempts[-1]["parse_status"],
-            "timestamp": now_iso(),
-        }
+            retries_left = cfg.max_retries
+            while parsed is None and retries_left > 0:
+                raw = _generate_once(judge, chunk_prompts[j], cfg.max_new_tokens,
+                                      cfg.retry_temperature, cfg.use_chat_template)
+                res = parse_judge_json(raw)
+                attempts.append({"temperature": cfg.retry_temperature, "raw": raw,
+                                 "parse_status": res["parse_status"], "error": res["error"]})
+                if res["parse_status"] in ("ok", "recovered"):
+                    parsed = res["data"]
+                retries_left -= 1
+
+            if parsed and cfg.kind == "safety":
+                flat = normalize_safety_labels(parsed)
+            elif parsed and cfg.kind == "beavertails":
+                flat = normalize_beavertails_scores(parsed)
+            elif parsed and cfg.kind == "pathway":
+                flat = normalize_pathway_labels(parsed)
+            elif parsed and cfg.kind == "cot_only":
+                flat = normalize_cot_only(parsed)
+            else:
+                flat = None
+            judged = {
+                "id": row["id"],
+                "dataset": row.get("dataset"),
+                "category": row.get("category"),
+                "condition": row.get("condition"),
+                "model": row.get("model"),
+                "judge_model": judge.name,
+                "judge_kind": cfg.kind,
+                "judge_attempts": attempts,
+                "judge_parsed": parsed,
+                "judge_flat": flat,
+                "judge_parse_status": attempts[-1]["parse_status"],
+                "timestamp": now_iso(),
+            }
+            out.append(judged)
+            if out_path is not None:
+                jsonl_append_one(out_path, judged)
     return out
 
 

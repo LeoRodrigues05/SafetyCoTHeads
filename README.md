@@ -13,7 +13,7 @@ random/layer-matched controls, OmegaConf configs and deterministic seeds.
 > The original code is preserved verbatim under
 > [`src/safety_cot_heads/_legacy/`](src/safety_cot_heads/_legacy) and is
 > imported from there wherever the original API is sound.  See
-> [`docs/MIGRATION.md`](docs/MIGRATION.md) for a file-by-file map.
+> [`docs/general/MIGRATION.md`](docs/general/MIGRATION.md) for a file-by-file map.
 
 ---
 
@@ -79,7 +79,7 @@ all green (currently 19/19), you are good to go.
 ## 2. Running the pipeline, one step at a time
 
 Experiment run configs are grouped under `configs/experiments/exp*/` using the
-same experiment numbering as `docs/ExperimentTracker.md`.  Every script accepts
+same experiment numbering as `docs/general/ExperimentTracker.md`.  Every script accepts
 `--config <path>`, optional `--overrides key=value ...` (OmegaConf dotlist), and
 a `--dry-run` flag that loads the dataset & writes a plan json without touching
 the model.

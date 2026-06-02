@@ -85,6 +85,12 @@ class HeadMaskController:
         self.attn_layers = attn_layers
         self._handles: list[torch.utils.hooks.RemovableHandle] = []
         self._cfg: Mapping | None = None
+        # Phase-window gating (Direction A v4 §4.4 / prereg §9).
+        # ``_token_idx`` is the *current generated-token index* (caller-set);
+        # ``_cfg['phase_window'] = (start, end)`` gates mask application to
+        # generated-token indices in [start, end). When unset, masks always
+        # apply (back-compat). Prompt forward pass is conventionally index -1.
+        self._token_idx: int = -1
         # Cached per-layer geometry.
         self._head_dim: list[int] = []
         self._num_attention_heads: list[int] = []
@@ -133,15 +139,40 @@ class HeadMaskController:
     @contextmanager
     def active(self, mask_cfg: Mapping | None):
         prev = self._cfg
+        prev_idx = self._token_idx
         self._cfg = mask_cfg
+        self._token_idx = -1
         try:
             yield self
         finally:
             self._cfg = prev
+            self._token_idx = prev_idx
+
+    def set_token_index(self, idx: int) -> None:
+        """Caller-driven token-position notifier for ``phase_window`` gating.
+
+        Generation loops should call this once per generated token (before the
+        forward pass that produces token ``idx``). ``idx == -1`` (default)
+        means "prompt / unspecified" — hooks treat this as out of every
+        finite window.
+        """
+        self._token_idx = int(idx)
+
+    def _phase_window_active(self) -> bool:
+        """True iff masks should fire at the current ``_token_idx``."""
+        if self._cfg is None:
+            return False
+        window = self._cfg.get("phase_window")
+        if window is None:
+            return True
+        start, end = int(window[0]), int(window[1])
+        return start <= self._token_idx < end
 
     # ---- hook factories ----------------------------------------------------
     def _entries_for_layer(self, layer_idx: int) -> list[tuple[int, Sequence[str]]]:
         if self._cfg is None:
+            return []
+        if not self._phase_window_active():
             return []
         head_mask = self._cfg.get("head_mask") or {}
         out = []

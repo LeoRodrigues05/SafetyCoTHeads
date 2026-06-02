@@ -1,7 +1,7 @@
 # Experiment Documentation
 
 These docs follow the research-experiment numbering in
-`docs/ExperimentTracker.md`. The YAML files under `configs/experiments/` are
+`docs/general/ExperimentTracker.md`. The YAML files under `configs/experiments/` are
 run configs grouped by the tracker experiment they support.
 
 ## Organization
@@ -17,7 +17,7 @@ run configs grouped by the tracker experiment they support.
 
 ## Source Of Truth
 
-- `docs/ExperimentTracker.md` defines the research plan and experiment names.
+- `docs/general/ExperimentTracker.md` defines the research plan and experiment names.
 - `configs/experiments/exp*/` defines the concrete run configs.
 - The `tracker:` block in each YAML maps that run back to the tracker.
 - `configs/experiments/README.md` lists each YAML's owning experiment and

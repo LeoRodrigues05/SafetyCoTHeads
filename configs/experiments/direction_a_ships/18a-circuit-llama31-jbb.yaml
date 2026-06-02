@@ -1,0 +1,41 @@
+# Direction A v4 — circuit ablation (heads ∪ neurons ∪ refusal direction),
+# Llama-3.1-8B-Instruct on JailbreakBench.
+# Pragmatic union of the three independent attribution scores, in the
+# spirit of ACDC / EAP (Conmy et al. 2023; Syed et al. 2023):
+#   * Top-8 SHIPS attention heads (scale to 1e-4, Q-only — same as 15c)
+#   * Top-32 Wang et al. safety neurons (zero ablation)
+#   * Arditi et al. directional ablation at all layers, using the layer-14
+#     refusal direction.
+tracker:
+  experiment: direction_a
+  run: circuit_llama31_jbb
+  status: runnable
+seed: 0
+condition: circuit_top8_top32_ablate
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+circuit:
+  heads_path: runs/direction_a/01-ships-discovery-llama31/ships_dataset_ranking.json
+  top_heads: 8
+  mask_qkv: [q]
+  head_mask_type: scale_mask
+  head_scale_factor: 1.0e-4
+  neurons_path: runs/direction_a/16-neuron-discovery-llama31/neuron_ranking.json
+  top_neurons: 32
+  neuron_scale_factor: 0.0
+  direction_path: runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz
+  direction_layer: 14
+  steering_mode: ablate
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/direction_a/18-circuit-llama31-jbb/seed0

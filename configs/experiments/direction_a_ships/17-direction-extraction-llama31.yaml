@@ -1,0 +1,23 @@
+# Direction A v4 — refusal-direction extraction (Arditi et al. 2024).
+# Per-layer direction = mean(harmful_residual) - mean(benign_residual)
+# captured at the last prompt token. Saves one vector per layer to npz.
+tracker:
+  experiment: direction_a
+  run: direction_extraction_llama31
+  status: runnable
+seed: 0
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+harmful:
+  name: maliciousinstruct
+  n: 100
+benign:
+  name: alpaca
+  n: 100
+batch_size: 4
+max_length: 512
+capture_last_n: 1
+output:
+  dir: runs/direction_a/17-direction-extraction-llama31

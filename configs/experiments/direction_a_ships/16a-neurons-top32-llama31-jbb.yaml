@@ -1,0 +1,31 @@
+# Direction A v4 — neuron ablation, Llama-3.1-8B-Instruct on JailbreakBench.
+# Default ablation per Wang et al. 2024 ("Finding Safety Neurons in LLMs"):
+# zero the gated activation of the top-32 contrast-scored neurons at the
+# input to down_proj (mask_type=scale_mask, scale_factor=0.0).
+tracker:
+  experiment: direction_a
+  run: neuron_top32_llama31_jbb
+  status: runnable
+seed: 0
+condition: neurons_top32
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+neurons:
+  source: file
+  path: runs/direction_a/16-neuron-discovery-llama31/neuron_ranking.json
+  top_k: 32
+  mask_type: scale_mask
+  scale_factor: 0.0          # full ablation (Wang et al. default)
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/direction_a/16-neurons-top32-llama31-jbb/seed0

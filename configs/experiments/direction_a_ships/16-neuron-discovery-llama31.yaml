@@ -1,0 +1,25 @@
+# Direction A v4 — MLP-neuron safety attribution (Wang et al. 2024).
+# Score per neuron = mean(act_harmful) - mean(act_benign) at the input to
+# down_proj, captured at the last prompt token. Same contrast pair used for
+# the refusal-direction extraction so the two ablations are comparable.
+tracker:
+  experiment: direction_a
+  run: neuron_discovery_llama31
+  status: runnable
+seed: 0
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+harmful:
+  name: maliciousinstruct
+  n: 100
+benign:
+  name: alpaca
+  n: 100
+batch_size: 4
+max_length: 512
+capture_last_n: 1            # last prompt token only (Wang et al. default)
+top_k_default: 32            # ranking metadata; actual top_k chosen per ablation
+output:
+  dir: runs/direction_a/16-neuron-discovery-llama31

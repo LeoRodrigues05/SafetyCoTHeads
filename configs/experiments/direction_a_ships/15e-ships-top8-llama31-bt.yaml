@@ -1,0 +1,31 @@
+# Direction A v4 — SHIPS top-8 head ablation, Llama-3.1-8B-Instruct on FULL BeaverTails.
+tracker:
+  experiment: direction_a
+  run: ships_top8_llama31_bt
+  status: runnable
+seed: 0
+condition: ships_top8
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: null
+heads:
+  source: file
+  path: runs/direction_a/01-ships-discovery-llama31/ships_dataset_ranking.json
+  top_k: 8
+mask:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+decoding:
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+batch_size: 4
+output:
+  dir: runs/direction_a/15-ships-top8-llama31-bt/seed0

@@ -9,6 +9,7 @@ write strict JSONL rows with full metadata for downstream judging.
 """
 
 from __future__ import annotations
+from contextlib import ExitStack
 from dataclasses import asdict
 from typing import Iterable, Mapping, Optional, Sequence
 
@@ -32,11 +33,18 @@ def generate(lm: LoadedModel,
              decoding: Optional[DecodingConfig] = None,
              *,
              mask_cfg: Optional[Mapping] = None,
+             neuron_cfg: Optional[Mapping] = None,
+             steering_cfg: Optional[Mapping] = None,
              system_prompt: Optional[str] = None,
              batch_size: int = 4,
              condition_label: str = "baseline",
              extra_meta: Optional[dict] = None) -> list[dict]:
     """Run generation for a list of ``{"id", "prompt", ...}`` rows.
+
+    Any combination of ``mask_cfg`` (heads), ``neuron_cfg`` (MLP neurons),
+    and ``steering_cfg`` (residual-stream direction) may be active; the
+    three controllers are nested via :class:`contextlib.ExitStack` and fire
+    independently per module.
 
     Returns one row per input with the generated completion, the rendered
     prompt, the decoding kwargs, and a ``condition`` label so the same JSONL
@@ -48,7 +56,10 @@ def generate(lm: LoadedModel,
     rows: list[dict] = []
     meta_extra = extra_meta or {}
 
-    with lm.head_mask_controller.active(mask_cfg):
+    with ExitStack() as stack:
+        stack.enter_context(lm.head_mask_controller.active(mask_cfg))
+        stack.enter_context(lm.neuron_mask_controller.active(neuron_cfg))
+        stack.enter_context(lm.steering_controller.active(steering_cfg))
         for batch in tqdm(list(_batched(prompts, batch_size)),
                           desc=f"generate[{condition_label}]"):
             rendered = [
@@ -77,6 +88,8 @@ def generate(lm: LoadedModel,
                     "condition": condition_label,
                     "decoding": decoding.asdict(),
                     "mask_cfg_active": mask_cfg is not None,
+                    "neuron_cfg_active": neuron_cfg is not None,
+                    "steering_cfg_active": steering_cfg is not None,
                     "timestamp": now_iso(),
                     **meta_extra,
                 })

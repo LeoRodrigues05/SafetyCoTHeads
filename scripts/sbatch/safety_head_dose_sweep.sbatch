@@ -9,7 +9,7 @@
 #SBATCH --error=logs/slurm/safety_head_dose_sweep-%j.err
 
 # Pick the target node at submit time, for example:
-#   sbatch --nodelist=<node-name> "scripts/sbatch scripts/safety_head_dose_sweep.sbatch"
+#   sbatch --nodelist=<node-name> scripts/sbatch/safety_head_dose_sweep.sbatch
 
 set -euo pipefail
 cd /home/leo.rodrigues/SafetyAblation/safety_cot_heads

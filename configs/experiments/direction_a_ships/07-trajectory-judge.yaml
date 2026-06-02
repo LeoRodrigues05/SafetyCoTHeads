@@ -1,0 +1,29 @@
+# Direction A — trajectory judge config (used by `run_trajectory.py`).
+#
+# The judge model is the same Qwen2.5-32B-Instruct used elsewhere in the
+# project, with the verbatim 5-label SAFETY_BEHAVIOR_PROMPT. We use it on
+# cumulative sentence prefixes; the `reasoning_about_safety` label (C) is the
+# signal that the trace is "thinking about safety".
+tracker:
+  experiment: direction_a
+  run: trajectory_judge
+  status: runnable
+model:
+  name: Qwen/Qwen2.5-32B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+kind: safety
+# Output is a small fixed JSON (5 booleans + 5 confidences ~ 60-80 tokens);
+# 128 leaves comfortable headroom and ~halves per-batch wall time vs. 256.
+max_new_tokens: 128
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+# Empirically batch_size=4 ran at ~70 s/batch on RTX 5000 Ada with the old
+# 256-token cap. With max_new_tokens=128 + batch_size=8 we ~4x throughput
+# (32B-NF4 weights ~17 GB; ~15 GB free for KV at 8x ~1.5K-token prefixes).
+batch_size: 8
+use_chat_template: true
+seed: 0
+n_limit: null

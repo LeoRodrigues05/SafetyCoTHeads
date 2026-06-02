@@ -1,0 +1,36 @@
+# Direction A v4 — pathway + CoT-only judge config (used by
+# `run_pathway_analysis.py`). Mirrors `07-trajectory-judge.yaml` (same judge
+# model / decoding) but the orchestrator overrides `kind` per stage
+# (`pathway` for prefix-level taxonomy, `cot_only` for monitor judge).
+#
+# Outputs (per `--out-dir`):
+#   judge_pathway.jsonl          per-prefix 12-label pathway judge
+#   judge_cot_only.jsonl         per-completion monitor judge (CoT only)
+#   pathway_vectors.jsonl        per-completion 8-dim pathway vector + dominant
+#   pathway_vectors.summary.json per-condition means + dominant histogram +
+#                                monitorability gap (when --final-judge given)
+#   monitorability_rows.jsonl    per-completion gap rows (when --final-judge)
+tracker:
+  experiment: direction_a
+  run: pathway_judge_v4
+  status: runnable
+model:
+  name: Qwen/Qwen2.5-32B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+# `kind:` is overridden per stage inside run_pathway_analysis.py; the field is
+# left here for back-compat with logging only.
+kind: pathway
+# Pathway judge emits a single JSON object with 12 booleans (~120-150 tokens).
+# 192 leaves headroom for retry variants while staying well below the prior
+# 256-cap baseline.
+max_new_tokens: 192
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+# Slightly smaller batch than 07 (longer JSON output ⇒ more KV per row).
+batch_size: 6
+use_chat_template: true
+seed: 0
+n_limit: null

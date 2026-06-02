@@ -1,0 +1,23 @@
+# Direction A — SHIPS head discovery on Llama-3.1-8B-Instruct.
+tracker:
+  experiment: direction_a
+  run: ships_discovery_llama31
+  status: runnable
+seed: 0
+method: ships
+model:
+  name: meta-llama/Llama-3.1-8B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: maliciousinstruct
+  n: 100   # full available split
+method_args:
+  mask_qkv: [q]
+  mask_type: scale_mask
+  scale_factor: 1.0e-4
+  top_k: 10
+  prompt_template: "## Query:{q}\n## Answer:"
+output:
+  dir: runs/direction_a/01-ships-discovery-llama31
+  top_k: 16
