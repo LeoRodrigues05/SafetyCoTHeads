@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_traj_resume-%j.out
-#SBATCH --error=logs/slurm/direction_a_traj_resume-%j.err
+#SBATCH --output=logs/slurm/analysis/direction_a_traj_resume-%j.out
+#SBATCH --error=logs/slurm/analysis/direction_a_traj_resume-%j.err
 
 # Resume-only: re-runs ONLY stage [4/4] (trajectory judge) over generation
 # files that don't already have a finished trajectory_vectors.summary.json
@@ -33,7 +33,7 @@ if [[ -z "${HF_TOKEN:-}" && -s "${HF_HOME}/token" ]]; then
 fi
 export HUGGING_FACE_HUB_TOKEN="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/analysis
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 CFG_DIR=configs/experiments/direction_a_ships

@@ -7,6 +7,7 @@ scope and will be pre-registered separately before their phase-2 implementation.
 
 **Frozen on:** 2026-05-26.
 
+$A^+=\frac{\text{ASR}{cond}-\text{ASR}{base}}{1-\text{ASR}{base}}$ if cond≥base; else $A^-=-\frac{\text{ASR}{base}-\text{ASR}{cond}}{\text{ASR}{base}}$. Bounded $[-1,1]$
 ---
 
 ## 1. Models

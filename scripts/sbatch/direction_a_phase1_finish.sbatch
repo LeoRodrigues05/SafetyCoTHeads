@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_phase1-%j.out
-#SBATCH --error=logs/slurm/direction_a_phase1-%j.err
+#SBATCH --output=logs/slurm/pipeline/direction_a_phase1-%j.out
+#SBATCH --error=logs/slurm/pipeline/direction_a_phase1-%j.err
 
 # Phase 1 finisher: runs everything needed to close out Phase 1.
 #   Stage 1 — P1.1.3 final-answer judge (Qwen-2.5-32B NF4) over the 8
@@ -32,7 +32,7 @@ if [[ -z "${HF_TOKEN:-}" && -s "${HF_HOME}/token" ]]; then
 fi
 export HUGGING_FACE_HUB_TOKEN="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/pipeline
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 CFG_DIR=configs/experiments/direction_a_ships

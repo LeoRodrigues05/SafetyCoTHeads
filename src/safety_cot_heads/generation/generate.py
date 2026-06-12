@@ -38,6 +38,7 @@ def generate(lm: LoadedModel,
              system_prompt: Optional[str] = None,
              batch_size: int = 4,
              condition_label: str = "baseline",
+             chat_template_kwargs: Optional[dict] = None,
              extra_meta: Optional[dict] = None) -> list[dict]:
     """Run generation for a list of ``{"id", "prompt", ...}`` rows.
 
@@ -63,7 +64,8 @@ def generate(lm: LoadedModel,
         for batch in tqdm(list(_batched(prompts, batch_size)),
                           desc=f"generate[{condition_label}]"):
             rendered = [
-                render_chat(tok, ex["prompt"], system=system_prompt)
+                render_chat(tok, ex["prompt"], system=system_prompt,
+                            chat_template_kwargs=chat_template_kwargs)
                 for ex in batch
             ]
             enc = tok(rendered, return_tensors="pt", padding=True,

@@ -7,6 +7,9 @@ lives in :mod:`scripts.run_generation`.  Use::
 """
 from __future__ import annotations
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 if __name__ == "__main__":
     from run_generation import main      # type: ignore

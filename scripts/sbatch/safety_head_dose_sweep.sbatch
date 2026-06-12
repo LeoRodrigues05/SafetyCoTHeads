@@ -5,8 +5,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/safety_head_dose_sweep-%j.out
-#SBATCH --error=logs/slurm/safety_head_dose_sweep-%j.err
+#SBATCH --output=logs/slurm/discovery/safety_head_dose_sweep-%j.out
+#SBATCH --error=logs/slurm/discovery/safety_head_dose_sweep-%j.err
 
 # Pick the target node at submit time, for example:
 #   sbatch --nodelist=<node-name> scripts/sbatch/safety_head_dose_sweep.sbatch
@@ -21,7 +21,7 @@ conda activate safety_cot_heads
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
 export TRANSFORMERS_VERBOSITY=warning
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/discovery
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 bash scripts/run_safety_head_dose_sweep.sh

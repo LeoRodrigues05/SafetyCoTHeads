@@ -1,0 +1,26 @@
+tracker:
+  experiment: direction_a_v5
+  run: steering_a1.0_qwen3_4b_thinking_jbb
+  status: runnable
+seed: 0
+condition: steering_a1.0
+model:
+  name: Qwen/Qwen3-4B-Thinking-2507
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 4
+output:
+  dir: runs/direction_a_v5/qwen3_4b_thinking/gen/jbb/steering_a1.0/seed0
+steering:
+  direction_path: runs/direction_a_v5/qwen3_4b_thinking/17-direction-extraction/refusal_directions.npz
+  layer: 14
+  mode: ablate
+  alpha: 1.0

@@ -35,6 +35,47 @@ deepseek_r1_distill_llama_8b:
   device_map: null
   trust_remote_code: false
 
+# --- Direction A v5 policy models -------------------------------------------
+# Qwen3-8B (Apache-2.0) — explicit <think>...</think> blocks via
+# `enable_thinking=true` in the chat template. Strongest single small model
+# for the v5 pipeline. ~16 GB BF16 on one GPU.
+qwen3_8b:
+  name: Qwen/Qwen3-8B
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# Qwen3-4B-Thinking-2507 — thinking-only variant; cheapest model with
+# explicit reasoning traces. ~8 GB BF16.
+qwen3_4b_thinking:
+  name: Qwen/Qwen3-4B-Thinking-2507
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# OLMo-2 7B SFT checkpoint (helpfulness only — pre-safety alignment).
+# Used as the "pre-safety-training" arm of the OLMo training-stage contrast.
+olmo2_7b_sft:
+  name: allenai/OLMo-2-1124-7B-SFT
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# OLMo-2 7B Instruct (SFT + DPO + safety alignment). Post-safety arm.
+olmo2_7b_instruct:
+  name: allenai/OLMo-2-1124-7B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
 # Judge — also a chat model, but run in 4-bit by default to save VRAM
 judge_llama3_8b:
   name: meta-llama/Meta-Llama-3-8B-Instruct
@@ -48,6 +89,15 @@ judge_llama3_8b:
 # by the collaborator's setup. Apache-2.0 licensed.
 judge_qwen2_5_32b:
   name: Qwen/Qwen2.5-32B-Instruct
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+  trust_remote_code: false
+
+# Direction A v4 stronger judge — Qwen3-30B-A3B-Instruct (MoE, 3B active).
+# Non-thinking instruct variant; ~17 GB at NF4 (fits single 32 GB GPU).
+judge_qwen3_30b_a3b:
+  name: Qwen/Qwen3-30B-A3B-Instruct-2507
   dtype: bfloat16
   load_in_4bit: true
   device_map: auto

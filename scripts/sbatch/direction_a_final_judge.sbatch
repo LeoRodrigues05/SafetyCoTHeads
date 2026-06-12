@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_final_judge-%j.out
-#SBATCH --error=logs/slurm/direction_a_final_judge-%j.err
+#SBATCH --output=logs/slurm/judging/direction_a_final_judge-%j.out
+#SBATCH --error=logs/slurm/judging/direction_a_final_judge-%j.err
 
 # Final-answer safety judge (Qwen-2.5-32B NF4) over the Direction-A
 # baseline + SHIPS-ablation completions (Phase 1, P1.1.3).
@@ -41,7 +41,7 @@ if [[ -z "${HF_TOKEN:-}" && -s "${HF_HOME}/token" ]]; then
 fi
 export HUGGING_FACE_HUB_TOKEN="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/judging
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 JUDGE_CFG=configs/experiments/direction_a_ships/07-trajectory-judge.yaml

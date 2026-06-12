@@ -5,8 +5,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_pathway_passA-%j.out
-#SBATCH --error=logs/slurm/direction_a_pathway_passA-%j.err
+#SBATCH --output=logs/slurm/judging/direction_a_pathway_passA-%j.out
+#SBATCH --error=logs/slurm/judging/direction_a_pathway_passA-%j.err
 #
 # Direction A v4 — Pass A pilot.
 # Re-judges the EXISTING trajectory prefix_rows.jsonl under
@@ -34,7 +34,7 @@ if [[ -z "${HF_TOKEN:-}" && -s "${HF_HOME}/token" ]]; then
 fi
 export HUGGING_FACE_HUB_TOKEN="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/judging
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 CFG=configs/experiments/direction_a_ships/14-pathway-judge.yaml

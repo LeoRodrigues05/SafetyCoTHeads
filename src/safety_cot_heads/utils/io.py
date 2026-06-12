@@ -20,13 +20,30 @@ def now_iso() -> str:
 
 
 def jsonl_write(path: str | os.PathLike, rows: Iterable[dict], *, append: bool = False) -> int:
-    mode = "a" if append else "w"
-    ensure_dir(Path(path).parent)
+    path = Path(path)
+    ensure_dir(path.parent)
     n = 0
-    with open(path, mode, encoding="utf-8") as f:
-        for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False, default=_default) + "\n")
-            n += 1
+    if append:
+        with path.open("a", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False, default=_default) + "\n")
+                n += 1
+            f.flush()
+            os.fsync(f.fileno())
+        return n
+
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False, default=_default) + "\n")
+                n += 1
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
     return n
 
 
@@ -44,9 +61,18 @@ def jsonl_read(path: str | os.PathLike) -> Iterator[dict]:
 
 
 def json_dump(path: str | os.PathLike, obj: Any, indent: int = 2) -> None:
-    ensure_dir(Path(path).parent)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=indent, ensure_ascii=False, default=_default)
+    path = Path(path)
+    ensure_dir(path.parent)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(obj, f, indent=indent, ensure_ascii=False, default=_default)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def json_load(path: str | os.PathLike) -> Any:

@@ -1,0 +1,33 @@
+tracker:
+  experiment: direction_a_v5
+  run: ships_top3_qwen3_8b_bt
+  status: runnable
+seed: 0
+condition: ships_top3
+model:
+  name: Qwen/Qwen3-8B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: 7
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 2
+output:
+  dir: runs/direction_a_v5/qwen3_8b/gen/bt/ships_top3/seed0
+chat_overrides:
+  enable_thinking: true
+heads:
+  source: file
+  path: runs/direction_a_v5/qwen3_8b/01-ships-discovery/ships_dataset_ranking.json
+  top_k: 3
+mask:
+  mask_qkv:
+  - q
+  mask_type: scale_mask
+  scale_factor: 0.0001

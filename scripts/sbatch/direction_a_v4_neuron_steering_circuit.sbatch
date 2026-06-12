@@ -4,8 +4,8 @@
 #SBATCH --nodes=1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_v4_nsc-%j.out
-#SBATCH --error=logs/slurm/direction_a_v4_nsc-%j.err
+#SBATCH --output=logs/slurm/pipeline/direction_a_v4_nsc-%j.out
+#SBATCH --error=logs/slurm/pipeline/direction_a_v4_nsc-%j.err
 #
 # Direction A v4 — Llama-3.1-8B-Instruct extended intervention grid
 #  Discovery: (a) MLP-neuron attribution (Wang et al. 2024)
@@ -44,7 +44,7 @@ if [[ -z "${HF_TOKEN:-}" && -s "${HF_HOME}/token" ]]; then
 fi
 export HUGGING_FACE_HUB_TOKEN="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/pipeline
 nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 
 CFG_DIR=configs/experiments/direction_a_ships

@@ -1,0 +1,112 @@
+# Direction A v5 — iso-ASR sweep matrix.
+#
+# A single source of truth for the v5 pipeline. `scripts/make_v5_configs.py`
+# expands this into per-cell YAMLs (discovery + generation) and per-model
+# sbatch driver scripts. Edit ONLY this file when adding a model, dose,
+# or condition family.
+#
+# Layout produced under configs/experiments/direction_a_v5_iso_asr/<model_key>/:
+#   01-ships-discovery.yaml
+#   16-neuron-discovery.yaml
+#   17-direction-extraction.yaml
+#   gen/baseline.yaml
+#   gen/ships_top{3,5,8}.yaml
+#   gen/neurons_top{256,512,1024}.yaml
+#   gen/steering_a{0.5,1.0,1.5}.yaml
+#   judge.yaml                (clone of 19-v4-jbb-qwen3-judge, gating ON)
+#
+# Run order (per model, see scripts/sbatch/direction_a_v5_per_model.sbatch):
+#   discovery -> generation (10 cells) -> v4 judge -> v4 report (with iso-ASR).
+
+dataset:
+  name: jailbreakbench
+  n: null              # full 100 prompts
+
+# Datasets to sweep over (overrides `dataset` above when set). Each becomes
+# a separate generation cell, judge run, and report. Use `n` for JBB-style
+# (flat) datasets and `n_per_category` for BeaverTails (14 categories).
+datasets:
+  jbb:
+    name: jailbreakbench
+    n: null            # full set = 100
+  bt:
+    name: beavertails
+    categories: null
+    n_per_category: 7  # 7 × 14 cats = 98 prompts (small-scale)
+
+# Each model_key maps to a `models.yaml` entry. Generation max_new_tokens
+# is overridable per model (R1/Qwen3 need more room for <think>).
+models:
+  qwen3_8b:
+    model_ref: qwen3_8b
+    max_new_tokens: 1024
+    batch_size: 2
+    chat_overrides:
+      enable_thinking: true     # Qwen3 thinking-mode toggle (chat template arg)
+  qwen3_4b_thinking:
+    model_ref: qwen3_4b_thinking
+    max_new_tokens: 1024
+    batch_size: 4
+  r1_distill_8b:
+    model_ref: deepseek_r1_distill_llama_8b
+    max_new_tokens: 1024
+    batch_size: 2
+  olmo2_7b_sft:
+    model_ref: olmo2_7b_sft
+    max_new_tokens: 512
+    batch_size: 4
+    # No SHIPS / neuron discovery: this checkpoint exists purely as the
+    # "pre-safety-training" arm. Reuses the OLMo-Instruct ranking instead.
+    reuse_discovery_from: olmo2_7b_instruct
+  olmo2_7b_instruct:
+    model_ref: olmo2_7b_instruct
+    max_new_tokens: 512
+    batch_size: 4
+  llama31_8b_control:
+    model_ref: llama31_8b_instruct
+    max_new_tokens: 512
+    batch_size: 4
+    # Reuse existing discovery artifacts under runs/direction_a/
+    reuse_discovery_paths:
+      ships: runs/direction_a/01-ships-discovery-llama31/ships_dataset_ranking.json
+      neurons: runs/direction_a/16-neuron-discovery-llama31/neuron_ranking.json
+      direction: runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz
+
+# Intervention families and dose sweep. Each cell becomes one generation YAML.
+ablations:
+  ships:
+    top_k: [3, 5, 8]
+    mask_qkv: [q]
+    mask_type: scale_mask
+    scale_factor: 1.0e-4
+  neurons:
+    top_k: [256, 512, 1024]
+    mask_type: scale_mask
+    scale_factor: 0.0
+  steering:
+    alpha: [0.5, 1.0, 1.5]
+    mode: ablate
+    layer: 14         # default; override in per-model YAML if needed
+
+# Decoding (greedy, seed 0). Tune via `--overrides` if you need a second seed.
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+
+# v4 judge — same as 19-v4 but with gating ON.
+judge:
+  model_ref: judge_qwen3_30b_a3b
+  max_new_tokens: 96
+  base_temperature: 0.0
+  retry_temperature: 0.3
+  max_retries: 2
+  batch_size: 8
+  use_chat_template: true
+  seed: 0
+  n_limit: null
+  gate_safety_by_coherence: true    # <-- v5 key change
+
+# Iso-ASR anchor for the report. Reasonable default: steering at alpha=1.0.
+report:
+  iso_anchor: steering_a1.0

@@ -21,9 +21,9 @@ from .neuron_and_steer import NeuronMaskController, SteeringController
 class LoadedModel:
     model: torch.nn.Module
     tokenizer: object
-    head_mask_controller: HeadMaskController
-    neuron_mask_controller: NeuronMaskController
-    steering_controller: SteeringController
+    head_mask_controller: Optional[HeadMaskController]
+    neuron_mask_controller: Optional[NeuronMaskController]
+    steering_controller: Optional[SteeringController]
     name: str
 
     @property
@@ -52,6 +52,7 @@ def load_model(
     load_in_4bit: bool = False,
     trust_remote_code: bool = False,
     device_map: Optional[str] = None,
+    attach_controllers: bool = True,
 ) -> LoadedModel:
     """Load a causal LM and attach the head-mask controller.
 
@@ -99,9 +100,9 @@ def load_model(
     if tok.pad_token_id is not None and tok.pad_token_id != model.config.pad_token_id:
         model.config.pad_token_id = tok.pad_token_id
 
-    ctrl = HeadMaskController.attach(model)
-    nctrl = NeuronMaskController.attach(model)
-    sctrl = SteeringController.attach(model)
+    ctrl = HeadMaskController.attach(model) if attach_controllers else None
+    nctrl = NeuronMaskController.attach(model) if attach_controllers else None
+    sctrl = SteeringController.attach(model) if attach_controllers else None
     return LoadedModel(
         model=model, tokenizer=tok,
         head_mask_controller=ctrl,

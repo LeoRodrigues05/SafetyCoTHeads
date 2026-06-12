@@ -1,6 +1,6 @@
 # Core
 torch>=2.2
-transformers>=4.44,<4.50
+transformers>=4.55,<4.60
 accelerate>=0.30
 tokenizers>=0.19
 sentencepiece

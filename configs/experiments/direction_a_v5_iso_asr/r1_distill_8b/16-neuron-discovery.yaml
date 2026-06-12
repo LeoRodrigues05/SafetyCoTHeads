@@ -1,0 +1,21 @@
+tracker:
+  experiment: direction_a_v5
+  run: neuron_discovery_r1_distill_8b
+  status: runnable
+seed: 0
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+  dtype: bfloat16
+  attn_implementation: eager
+harmful:
+  name: maliciousinstruct
+  n: 100
+benign:
+  name: alpaca
+  n: 100
+batch_size: 4
+max_length: 512
+capture_last_n: 1
+top_k_default: 32
+output:
+  dir: runs/direction_a_v5/r1_distill_8b/16-neuron-discovery

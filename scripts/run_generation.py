@@ -249,6 +249,10 @@ def main() -> int:
         system_prompt=cfg.get("system_prompt"),
         batch_size=int(cfg.get("batch_size", 4)),
         condition_label=cfg.condition,
+        chat_template_kwargs=(
+            cfg_to_dict(cfg.get("chat_overrides"))
+            if cfg.get("chat_overrides") is not None else None
+        ),
         extra_meta=extra_meta,
     )
     jsonl_write(out_dir / f"completions_{cfg.condition}.jsonl", out_rows)

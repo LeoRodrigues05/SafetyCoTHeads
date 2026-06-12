@@ -199,6 +199,190 @@ def normalize_pathway_labels(data: dict) -> Optional[dict]:
     return {"pathway_labels": flat}
 
 
+def normalize_single_label(data: dict) -> Optional[dict]:
+    """Reduce a single-label judge response to ``{label_present, confidence, rationale}``.
+
+    Accepts either ``{"label_present": ...}`` or legacy fallbacks where the
+    judge wrote e.g. ``{"present": True}`` or just ``{"<label>": True}``.
+    """
+    if not isinstance(data, dict):
+        return None
+
+    def _norm_key(k: str) -> str:
+        return k.lower().replace(" ", "_").replace("-", "_")
+
+    src = {_norm_key(k): v for k, v in data.items()}
+    pres = src.get("label_present")
+    if pres is None:
+        pres = src.get("present")
+    if isinstance(pres, str):
+        s = pres.strip().lower()
+        pres = True if s in ("true", "yes", "1") else (False if s in ("false", "no", "0") else None)
+    elif isinstance(pres, (int, float)) and not isinstance(pres, bool):
+        pres = bool(pres)
+    elif not isinstance(pres, bool):
+        pres = None
+    conf = src.get("confidence")
+    try:
+        conf = float(conf) if conf is not None else None
+    except (TypeError, ValueError):
+        conf = None
+    rat = src.get("rationale")
+    if rat is not None and not isinstance(rat, str):
+        rat = str(rat)
+    return {"label_present": pres, "confidence": conf, "rationale": rat}
+
+
+SAFETY_REASONING_CATEGORIES = (
+    "risk_acknowledgment",
+    "policy_boundary",
+    "intent_assessment",
+    "refusal_reasoning",
+    "safer_alternative",
+    "other_safety_reasoning",
+)
+
+
+def normalize_safety_reasoning_trace(data: dict) -> Optional[dict]:
+    """Normalize indexed safety-reasoning span judgments.
+
+    Expected parsed shape:
+        ``has_safety_reasoning`` plus
+        ``safety_reasoning_sentence_indexes`` entries carrying
+        ``section``, ``index``, ``global_index``, ``category``,
+        ``confidence``, and ``rationale``.
+    """
+    if not isinstance(data, dict):
+        return None
+
+    def _norm_key(k: str) -> str:
+        return k.lower().replace(" ", "_").replace("-", "_")
+
+    def _as_bool(v):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in ("true", "yes", "1"):
+                return True
+            if s in ("false", "no", "0"):
+                return False
+        if isinstance(v, (int, float)):
+            return bool(v)
+        return None
+
+    def _as_int(v):
+        if v is None:
+            return None
+        try:
+            return int(float(v))
+        except (TypeError, ValueError):
+            return None
+
+    def _as_float(v):
+        if v is None:
+            return None
+        try:
+            return max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return None
+
+    src = {_norm_key(k): v for k, v in data.items()}
+    raw_spans = (
+        src.get("safety_reasoning_sentence_indexes")
+        or src.get("sentence_indexes")
+        or src.get("indexes")
+        or []
+    )
+    if not isinstance(raw_spans, list):
+        raw_spans = []
+
+    spans = []
+    for item in raw_spans:
+        if not isinstance(item, dict):
+            continue
+        d = {_norm_key(k): v for k, v in item.items()}
+        section = str(d.get("section") or "").strip().lower()
+        if section not in ("cot", "output"):
+            section = None
+        idx = _as_int(d.get("index"))
+        gidx = _as_int(d.get("global_index"))
+        category = str(d.get("category") or "other_safety_reasoning").strip().lower()
+        category = category.replace(" ", "_").replace("-", "_")
+        if category not in SAFETY_REASONING_CATEGORIES:
+            category = "other_safety_reasoning"
+        conf = _as_float(d.get("confidence"))
+        rat = d.get("rationale")
+        if rat is not None and not isinstance(rat, str):
+            rat = str(rat)
+        if section is None or idx is None:
+            continue
+        spans.append({
+            "section": section,
+            "index": idx,
+            "global_index": gidx,
+            "category": category,
+            "confidence": conf,
+            "rationale": rat,
+        })
+
+    spans.sort(key=lambda r: (
+        r["global_index"] if r["global_index"] is not None else 10**9,
+        0 if r["section"] == "cot" else 1,
+        r["index"],
+    ))
+
+    pos_src = src.get("position") if isinstance(src.get("position"), dict) else {}
+    pos = {_norm_key(k): v for k, v in pos_src.items()} if pos_src else {}
+    first = spans[0] if spans else {}
+    first_section = str(pos.get("first_section") or first.get("section") or "").lower()
+    if first_section not in ("cot", "output"):
+        first_section = None
+    first_index = _as_int(pos.get("first_index"))
+    if first_index is None:
+        first_index = first.get("index")
+    first_global = _as_int(pos.get("first_global_index"))
+    if first_global is None:
+        first_global = first.get("global_index")
+
+    extent_src = src.get("extent") if isinstance(src.get("extent"), dict) else {}
+    extent = {_norm_key(k): v for k, v in extent_src.items()} if extent_src else {}
+    sentence_count = _as_int(extent.get("sentence_count"))
+    if sentence_count is None:
+        sentence_count = len(spans)
+    frac = _as_float(extent.get("fraction_of_sentences"))
+    coverage = str(extent.get("coverage") or "").strip().lower()
+    if coverage not in ("none", "minimal", "some", "extensive"):
+        coverage = (
+            "none" if sentence_count == 0 else
+            "minimal" if sentence_count == 1 else
+            "some"
+        )
+
+    has = _as_bool(src.get("has_safety_reasoning"))
+    if has is None:
+        has = bool(spans)
+    summary = src.get("summary")
+    if summary is not None and not isinstance(summary, str):
+        summary = str(summary)
+
+    return {
+        "has_safety_reasoning": bool(has),
+        "safety_reasoning_sentence_indexes": spans,
+        "position": {
+            "first_section": first_section,
+            "first_index": first_index,
+            "first_global_index": first_global,
+        },
+        "extent": {
+            "sentence_count": sentence_count,
+            "fraction_of_sentences": frac,
+            "coverage": coverage,
+        },
+        "summary": summary,
+    }
+
+
 def normalize_cot_only(data: dict) -> Optional[dict]:
     """Reduce a parsed CoT-only monitorability judge dict to a flat record.
 

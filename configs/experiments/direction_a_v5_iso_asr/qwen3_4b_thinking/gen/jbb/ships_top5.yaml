@@ -1,0 +1,30 @@
+tracker:
+  experiment: direction_a_v5
+  run: ships_top5_qwen3_4b_thinking_jbb
+  status: runnable
+seed: 0
+condition: ships_top5
+model:
+  name: Qwen/Qwen3-4B-Thinking-2507
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 4
+output:
+  dir: runs/direction_a_v5/qwen3_4b_thinking/gen/jbb/ships_top5/seed0
+heads:
+  source: file
+  path: runs/direction_a_v5/qwen3_4b_thinking/01-ships-discovery/ships_dataset_ranking.json
+  top_k: 5
+mask:
+  mask_qkv:
+  - q
+  mask_type: scale_mask
+  scale_factor: 0.0001

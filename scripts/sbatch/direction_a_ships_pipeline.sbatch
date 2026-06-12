@@ -6,8 +6,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/direction_a_ships-%j.out
-#SBATCH --error=logs/slurm/direction_a_ships-%j.err
+#SBATCH --output=logs/slurm/pipeline/direction_a_ships-%j.out
+#SBATCH --error=logs/slurm/pipeline/direction_a_ships-%j.err
 
 # Single-job Direction A SHIPS slice. Runs end-to-end:
 #   1. SHIPS head discovery on Llama-3.1-8B-Instruct  (MaliciousInstruct, n=100)

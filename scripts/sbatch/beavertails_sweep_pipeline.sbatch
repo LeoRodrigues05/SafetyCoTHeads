@@ -5,8 +5,8 @@
 #SBATCH --gres=gpu:nvidia-rtx-5000-ada-generation:1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm/beavertails_dose_sweep-%j.out
-#SBATCH --error=logs/slurm/beavertails_dose_sweep-%j.err
+#SBATCH --output=logs/slurm/discovery/beavertails_dose_sweep-%j.out
+#SBATCH --error=logs/slurm/discovery/beavertails_dose_sweep-%j.err
 
 # Submit from the repo root:
 #   sbatch scripts/sbatch/beavertails_sweep_pipeline.sbatch
@@ -24,7 +24,7 @@ export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
 export PYTHONUNBUFFERED=1
 export TRANSFORMERS_VERBOSITY=warning
 
-mkdir -p logs/slurm
+mkdir -p logs/slurm/discovery
 if command -v nvidia-smi >/dev/null 2>&1; then
   nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv
 fi

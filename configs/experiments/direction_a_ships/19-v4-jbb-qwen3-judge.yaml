@@ -1,0 +1,29 @@
+# Direction A v4 — JBB single-label judge config (Qwen3-30B-A3B-Instruct, NF4).
+# Drives `scripts/run_v4_jbb_judge.py`, which loads the judge once and loops
+# over all (condition × label) pairs:
+#   * 5 safety labels   (full completion)         -> judge_safety__<label>.jsonl
+#   * 12 pathway labels (per cumulative prefix)   -> judge_pathway__<label>.jsonl
+#   * 1 cot_only        (CoT trace, no final ans) -> judge_cot_only.jsonl
+# Then merges per-label files into standard `judged_<cond>.jsonl` and
+# `judge_pathway.jsonl` shapes so downstream pathway/monitorability code is
+# unchanged.
+tracker:
+  experiment: direction_a
+  run: v4_jbb_qwen3_judge
+  status: runnable
+model:
+  name: Qwen/Qwen3-30B-A3B-Instruct-2507
+  dtype: bfloat16
+  load_in_4bit: true
+  device_map: auto
+  trust_remote_code: false
+# Single-label prompts emit ~25-50 tokens of JSON + rationale. 96 leaves
+# headroom for retries with rising temperature.
+max_new_tokens: 96
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+batch_size: 8
+use_chat_template: true
+seed: 0
+n_limit: null

@@ -26,8 +26,13 @@ DEFAULT_SAFETY_SYSTEM_PROMPT = (
 def render_chat(tokenizer,
                 user: str,
                 system: Optional[str] = DEFAULT_SAFETY_SYSTEM_PROMPT,
-                add_generation_prompt: bool = True) -> str:
+                add_generation_prompt: bool = True,
+                chat_template_kwargs: Optional[dict] = None) -> str:
     """Format ``user`` (+ optional system) through the tokenizer's chat template.
+
+    ``chat_template_kwargs`` are forwarded as kwargs to
+    ``tokenizer.apply_chat_template`` — used e.g. to pass
+    ``enable_thinking=True`` for Qwen3 thinking-mode templates.
 
     Falls back to ``SHIPS_TEMPLATE`` for tokenizers without a chat template
     (e.g. base Llama-2 / Mistral non-instruct)."""
@@ -37,6 +42,8 @@ def render_chat(tokenizer,
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
         return tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=add_generation_prompt,
+            messages, tokenize=False,
+            add_generation_prompt=add_generation_prompt,
+            **(chat_template_kwargs or {}),
         )
     return SHIPS_TEMPLATE.format(q=user)
