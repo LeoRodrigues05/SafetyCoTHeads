@@ -1,17 +1,16 @@
 tracker:
   experiment: direction_a_v5
-  run: steering_a0.5_r1_distill_8b_bt
+  run: steering_ablate_r1_distill_8b_jbb
   status: runnable
 seed: 0
-condition: steering_a0.5
+condition: steering_ablate
 model:
   name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
   dtype: bfloat16
   attn_implementation: eager
 dataset:
-  name: beavertails
-  categories: null
-  n_per_category: 7
+  name: jailbreakbench
+  n: null
 decoding:
   temperature: 0.0
   do_sample: false
@@ -19,9 +18,9 @@ decoding:
   max_new_tokens: 1024
 batch_size: 2
 output:
-  dir: runs/direction_a_v5/r1_distill_8b/gen/bt/steering_a0.5/seed0
+  dir: runs/direction_a_v5/r1_distill_8b/gen/jbb/steering_ablate/seed0
 steering:
   direction_path: runs/direction_a_v5/r1_distill_8b/17-direction-extraction/refusal_directions.npz
   layer: 14
-  mode: add
-  alpha: -4.0
+  mode: ablate
+  alpha: 1.0

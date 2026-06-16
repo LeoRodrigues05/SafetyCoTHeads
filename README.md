@@ -32,14 +32,19 @@ completions, then judge them along several axes:
   - `baseline` — no intervention.
   - `ships_top{3,5,8}` — ablate the top-K safety **attention heads** (SHIPS).
   - `neurons_top{256,512,1024}` — ablate the top-K safety **MLP neurons**.
-  - `steering_a{0.5,1.0,1.5}` — add the **refusal direction** at dose α
-    (negative dose = enhance safety; positive = ablate). `steering_a1.0` is the
-    iso-ASR anchor.
+  - `steering_a{0.5,1.0,1.5}` — **activation-addition** of the (unit-normalised)
+    **refusal direction** at dose α; a negative coefficient suppresses refusal
+    (induces harm). Magnitude = `dose × add_coeff` and is comparable across
+    models. `steering_a1.0` is the iso-ASR anchor.
+  - `steering_ablate` — **full directional ablation** (Arditi et al.): project
+    the refusal direction out at every layer (α-free).
 - **Datasets:** `jbb` (JailbreakBench, 100 harmful prompts) and `bt`
   (BeaverTails, 98 = 7×14 categories).
 - **Models:** primary `qwen3_8b` (explicit `<think>` traces) and
   `llama31_8b_control`; configs also exist for `qwen3_4b_thinking`,
-  `r1_distill_8b`, `olmo2_7b_instruct`, `olmo2_7b_sft`.
+  `r1_distill_8b`, `olmo2_7b_instruct`, `olmo2_7b_sft`, and the OLMo-3 reasoning
+  arm `olmo3_7b_think` / `olmo3_7b_base` (run via `scripts/setup_vm.sh` +
+  `scripts/run_local_pipeline.sh` on a standalone GPU VM).
 
 **What the judge measures** (judge model = Qwen3-30B-A3B):
 

@@ -1,11 +1,11 @@
 tracker:
   experiment: direction_a_v5
-  run: steering_a1.0_olmo2_7b_instruct_bt
+  run: steering_ablate_llama31_8b_control_bt
   status: runnable
 seed: 0
-condition: steering_a1.0
+condition: steering_ablate
 model:
-  name: allenai/OLMo-2-1124-7B-Instruct
+  name: meta-llama/Llama-3.1-8B-Instruct
   dtype: bfloat16
   attn_implementation: eager
 dataset:
@@ -19,9 +19,9 @@ decoding:
   max_new_tokens: 512
 batch_size: 4
 output:
-  dir: runs/direction_a_v5/olmo2_7b_instruct/gen/bt/steering_a1.0/seed0
+  dir: runs/direction_a_v5/llama31_8b_control/gen/bt/steering_ablate/seed0
 steering:
-  direction_path: runs/direction_a_v5/olmo2_7b_instruct/17-direction-extraction/refusal_directions.npz
+  direction_path: runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz
   layer: 14
-  mode: add
-  alpha: -8.0
+  mode: ablate
+  alpha: 1.0

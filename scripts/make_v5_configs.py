@@ -219,11 +219,38 @@ def _gen_steering(model_key, ref, model_cfg, matrix, dset_key, dset,
     a = matrix["ablations"]["steering"]
     cfg = _gen_common(model_key, ref, model_cfg, matrix,
                        f"steering_a{alpha}", dset_key, dset)
+    # Dose sweep uses `mode` (default activation-addition). add applies
+    # h + alpha*v with v = mean(harmful) - mean(benign); `add_alpha_sign`
+    # (default -1) makes positive doses SUPPRESS refusal (induce harm), so the
+    # stored alpha = dose * sign. ablate would ignore alpha entirely.
+    mode = a.get("mode", "add")
+    eff_alpha = float(alpha)
+    if mode == "add":
+        # The direction is unit-normalised at apply time, so eff_alpha is the
+        # ABSOLUTE perturbation magnitude (comparable across models). dose *
+        # add_coeff sets the scale; add_alpha_sign (-1) suppresses refusal.
+        eff_alpha *= float(a.get("add_alpha_sign", -1.0)) * float(a.get("add_coeff", 1.0))
     cfg["steering"] = {
         "direction_path": _direction_path(model_key, model_cfg),
         "layer": int(a["layer"]),
-        "mode": a["mode"],
-        "alpha": float(alpha),
+        "mode": mode,
+        "alpha": eff_alpha,
+    }
+    return cfg
+
+
+def _gen_steering_ablate(model_key, ref, model_cfg, matrix, dset_key, dset,
+                          name: str) -> dict:
+    """Full directional ablation (Arditi et al.): project the refusal direction
+    out at EVERY layer. alpha-free; kept as its own condition rather than mixed
+    into the activation-addition dose sweep."""
+    a = matrix["ablations"]["steering"]
+    cfg = _gen_common(model_key, ref, model_cfg, matrix, name, dset_key, dset)
+    cfg["steering"] = {
+        "direction_path": _direction_path(model_key, model_cfg),
+        "layer": int(a["layer"]),
+        "mode": "ablate",
+        "alpha": 1.0,
     }
     return cfg
 
@@ -301,6 +328,12 @@ def expand_one_model(model_key: str, model_cfg: dict, matrix: dict,
             p = ddir / f"steering_a{a}.yaml"
             _write(p, _gen_steering(model_key, ref, model_cfg, matrix,
                                      dkey, dset, a))
+            written.append(p)
+        ablate_name = matrix["ablations"]["steering"].get("ablate_condition")
+        if ablate_name:
+            p = ddir / f"{ablate_name}.yaml"
+            _write(p, _gen_steering_ablate(model_key, ref, model_cfg, matrix,
+                                            dkey, dset, ablate_name))
             written.append(p)
 
     # judge

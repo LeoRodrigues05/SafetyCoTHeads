@@ -22,5 +22,5 @@ output:
 steering:
   direction_path: runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz
   layer: 14
-  mode: ablate
-  alpha: 0.5
+  mode: add
+  alpha: -4.0

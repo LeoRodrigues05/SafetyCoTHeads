@@ -25,5 +25,5 @@ chat_overrides:
 steering:
   direction_path: runs/direction_a_v5/qwen3_8b/17-direction-extraction/refusal_directions.npz
   layer: 14
-  mode: ablate
-  alpha: 1.0
+  mode: add
+  alpha: -8.0

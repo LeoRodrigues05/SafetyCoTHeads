@@ -206,7 +206,12 @@ class SteeringController:
             v = torch.as_tensor(v)
         v = v.to(device=ref.device, dtype=ref.dtype)
         mode = self._cfg.get("mode", "add")
-        if mode == "ablate":
+        if mode in ("ablate", "add"):
+            # Unit-normalise the direction. For "ablate" this is required for the
+            # projection; for "add" it makes `alpha` the ABSOLUTE perturbation
+            # magnitude (h + alpha * v_unit), so the dose is comparable across
+            # models — raw ||v|| varies ~4x between models (e.g. 5 vs 20 at L14),
+            # which otherwise makes a fixed alpha mean different things per model.
             v = v / (v.norm() + 1e-8)
         self._direction_cache = v
         return v

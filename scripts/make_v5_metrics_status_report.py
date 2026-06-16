@@ -38,6 +38,7 @@ CONDITIONS = (
     "ships_top3", "ships_top5", "ships_top8",
     "neurons_top256", "neurons_top512", "neurons_top1024",
     "steering_a0.5", "steering_a1.0", "steering_a1.5",
+    "steering_ablate",
 )
 # judge-root dir name -> short source label
 SOURCES = (

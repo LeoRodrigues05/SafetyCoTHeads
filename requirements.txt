@@ -1,6 +1,6 @@
 # Core
 torch>=2.2
-transformers>=4.55,<4.60
+transformers>=4.57,<4.60   # >=4.57 ships the native `olmo3` architecture
 accelerate>=0.30
 tokenizers>=0.19
 sentencepiece

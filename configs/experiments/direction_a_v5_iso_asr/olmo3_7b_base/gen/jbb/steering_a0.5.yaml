@@ -22,5 +22,5 @@ output:
 steering:
   direction_path: runs/direction_a_v5/olmo3_7b_think/17-direction-extraction/refusal_directions.npz
   layer: 14
-  mode: ablate
-  alpha: 0.5
+  mode: add
+  alpha: -4.0

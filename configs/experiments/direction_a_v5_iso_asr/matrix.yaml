@@ -100,9 +100,21 @@ ablations:
     mask_type: scale_mask
     scale_factor: 0.0
   steering:
-    alpha: [0.5, 1.0, 1.5]
-    mode: ablate
-    layer: 14         # default; override in per-model YAML if needed
+    alpha: [0.5, 1.0, 1.5]   # monotonic dose sweep, all activation-addition
+    mode: add                # h + alpha*v at `layer`; alpha actually scales
+    layer: 14
+    # add applies h + alpha*v with v = mean(harmful) - mean(benign). NEGATIVE
+    # alpha SUPPRESSES refusal (induces harm), so the stored alpha = dose * sign
+    # (e.g. dose 1.5 -> alpha -1.5). `ablate` would ignore alpha, which is why
+    # the old ablate sweep was flat.
+    add_alpha_sign: -1.0
+    # The direction is unit-normalised at apply time, so the perturbation norm =
+    # dose * add_coeff (comparable across models). add_coeff is the TUNABLE here:
+    # raise it if the smoke shows ~baseline ASR, lower it if outputs go gibberish.
+    add_coeff: 8.0
+    # Full directional ablation (Arditi: project v out at EVERY layer, alpha-free)
+    # is kept as its OWN condition instead of being mixed into the dose sweep.
+    ablate_condition: steering_ablate
 
 # Decoding (greedy, seed 0). Tune via `--overrides` if you need a second seed.
 decoding:
