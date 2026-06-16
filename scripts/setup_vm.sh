@@ -61,6 +61,16 @@ if torch.cuda.is_available():
         print("WARNING: GPU older than Hopper — expect much slower generation.")
 else:
     raise SystemExit("ERROR: no CUDA device visible; check the driver / VM image.")
+
+import transformers
+print("transformers:", transformers.__version__)
+try:
+    from transformers import Olmo3ForCausalLM  # noqa: F401
+    print("olmo3 arch: supported")
+except Exception:
+    raise SystemExit(
+        "ERROR: this transformers lacks the native `olmo3` architecture "
+        "(need >= 4.57). Run: pip install -U 'transformers>=4.57,<4.60'")
 PY
 
 echo "=== [5/6] Hugging Face cache + (optional) login ==="
@@ -70,7 +80,7 @@ if [[ -n "${HF_TOKEN:-}" ]]; then
     python -c "from huggingface_hub import login; login('${HF_TOKEN}')" || \
         echo "  (hf login failed; OLMo + Qwen judge are open so continuing)"
 else
-    echo "  HF_TOKEN not set — fine, OLMo-2 and the Qwen3 judge are open models."
+    echo "  HF_TOKEN not set — fine, OLMo-3 and the Qwen3 judge are open models."
 fi
 
 if [[ "${SKIP_SMOKE:-0}" == "1" ]]; then
@@ -84,13 +94,15 @@ export PYTHONUNBUFFERED=1
 export TRANSFORMERS_VERBOSITY=warning
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 SMOKE="runs/direction_a_v5/_smoke_vm"
-JUDGE_CFG="configs/experiments/direction_a_v5_iso_asr/olmo2_7b_instruct/judge.yaml"
+JUDGE_CFG="configs/experiments/direction_a_v5_iso_asr/olmo3_7b_think/judge.yaml"
 
-for mk in olmo2_7b_instruct olmo2_7b_sft; do
-    echo "--- generation smoke: $mk (n=2, 32 tokens) ---"
+# Think first (exercises the <think> path + olmo3 arch), then Base (exercises
+# the no-chat-template SHIPS fallback). 48 tokens is enough to confirm decode.
+for mk in olmo3_7b_think olmo3_7b_base; do
+    echo "--- generation smoke: $mk (n=2, 48 tokens) ---"
     python -m scripts.run_generation \
         --config "configs/experiments/direction_a_v5_iso_asr/${mk}/gen/jbb/baseline.yaml" \
-        --overrides dataset.n=2 batch_size=2 decoding.max_new_tokens=32 \
+        --overrides dataset.n=2 batch_size=2 decoding.max_new_tokens=48 \
             output.dir="${SMOKE}/${mk}/baseline/seed0"
 done
 
@@ -99,14 +111,14 @@ python -m scripts.run_v4_jbb_judge \
     --config "${JUDGE_CFG}" \
     --out-base "${SMOKE}/judge" \
     --seed 0 \
-    --condition "tag=olmo_instruct,cond=baseline,completions=${SMOKE}/olmo2_7b_instruct/baseline/seed0/completions_baseline.jsonl" \
-    --condition "tag=olmo_sft,cond=baseline,completions=${SMOKE}/olmo2_7b_sft/baseline/seed0/completions_baseline.jsonl" \
+    --condition "tag=olmo3_think,cond=baseline,completions=${SMOKE}/olmo3_7b_think/baseline/seed0/completions_baseline.jsonl" \
+    --condition "tag=olmo3_base,cond=baseline,completions=${SMOKE}/olmo3_7b_base/baseline/seed0/completions_baseline.jsonl" \
     --skip-pathway \
     --overrides model.load_in_4bit=false
 
 echo
 echo "=============================================================="
-echo " SETUP COMPLETE — OLMo gen + Qwen3-30B judge verified on this VM."
-echo " Next:  bash scripts/run_local_pipeline.sh olmo2_7b_instruct all"
+echo " SETUP COMPLETE — OLMo-3 gen + Qwen3-30B judge verified on this VM."
+echo " Next:  bash scripts/run_local_pipeline.sh olmo3_7b_think all"
 echo " (see scripts/run_local_pipeline.sh for staged / parallel runs)"
 echo "=============================================================="
