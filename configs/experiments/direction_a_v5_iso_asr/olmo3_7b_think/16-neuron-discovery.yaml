@@ -1,0 +1,21 @@
+tracker:
+  experiment: direction_a_v5
+  run: neuron_discovery_olmo3_7b_think
+  status: runnable
+seed: 0
+model:
+  name: allenai/Olmo-3-7B-Think
+  dtype: bfloat16
+  attn_implementation: eager
+harmful:
+  name: maliciousinstruct
+  n: 100
+benign:
+  name: alpaca
+  n: 100
+batch_size: 4
+max_length: 512
+capture_last_n: 1
+top_k_default: 32
+output:
+  dir: runs/direction_a_v5/olmo3_7b_think/16-neuron-discovery

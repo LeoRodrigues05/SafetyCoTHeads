@@ -76,6 +76,32 @@ olmo2_7b_instruct:
   device_map: null
   trust_remote_code: false
 
+# --- OLMo-3 (1125, Nov 2025) — fully-open "model flow" reasoning family -------
+# Same dense 7B skeleton as OLMo-2 (32 layers, 4096 hidden, 11008 MLP, 32 heads,
+# MHA) so weight footprint / per-token compute are unchanged; OLMo-3 adds a 64k
+# context (YaRN ×8) + sliding-window attention (3:1) that is inert at our short
+# sequence lengths. Native `olmo3` arch — needs transformers >= 4.57.
+#
+# OLMo-3 7B Base — pretrained completion model, no chat template (generation
+# falls back to the SHIPS query/answer template). Stage-0 / pre-alignment arm.
+olmo3_7b_base:
+  name: allenai/Olmo-3-7B-Base
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
+# OLMo-3 7B Think — first open reasoning model; emits <think> traces BY DEFAULT
+# (no enable_thinking flag). The CoT-bearing arm for the monitorability analysis.
+olmo3_7b_think:
+  name: allenai/Olmo-3-7B-Think
+  dtype: bfloat16
+  attn_implementation: eager
+  load_in_4bit: false
+  device_map: null
+  trust_remote_code: false
+
 # Judge — also a chat model, but run in 4-bit by default to save VRAM
 judge_llama3_8b:
   name: meta-llama/Meta-Llama-3-8B-Instruct
