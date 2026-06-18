@@ -80,9 +80,14 @@ def _stable_key(seed: int, *parts: str) -> str:
 
 def _subset_rows(rows: list[dict], n: int, *, seed: int,
                  model_key: str, dkey: str, cond: str) -> list[dict]:
+    # PAIRED subset: the sort key deliberately excludes `cond` so every
+    # condition samples the SAME n prompts per (model, dataset). This makes
+    # cross-condition comparisons a controlled, same-prompt contrast instead of
+    # a different-prompt draw per condition. `cond` is kept in the signature for
+    # call-site compatibility but is intentionally unused here.
     ordered = sorted(
         rows,
-        key=lambda r: _stable_key(seed, model_key, dkey, cond, str(r.get("id"))),
+        key=lambda r: _stable_key(seed, model_key, dkey, str(r.get("id"))),
     )
     return ordered[: min(n, len(ordered))]
 
