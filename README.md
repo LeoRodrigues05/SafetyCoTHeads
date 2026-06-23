@@ -3,9 +3,9 @@
 A research codebase for **measuring and comparing white-box safety interventions** on
 reasoning (chain-of-thought) language models.
 
-The current work is **Direction A v5**: take several families of internal,
-inference-time safety perturbations, apply them at matched strengths to the same
-harmful prompts, and ask — beyond "did the model comply?" — *how* each
+The current work is **Direction A v5 (iso-ASR sweep)**: take several families of
+internal, inference-time safety perturbations, apply them at matched strengths to
+the same harmful prompts, and ask — beyond "did the model comply?" — *how* each
 intervention breaks safety and whether the visible reasoning trace still warns
 before an unsafe answer.
 
@@ -13,7 +13,7 @@ before an unsafe answer.
 > [`ydyjya/SafetyHeadAttribution`](https://github.com/ydyjya/SafetyHeadAttribution)
 > (SHIPS / Sahara safety-head attribution) and
 > [`Lott11/CoT-safety`](https://github.com/Lott11/CoT-safety) (5-label
-> LLM-as-judge + BeaverTails). Original code is preserved verbatim under
+> LLM-as-judge + BeaverTails). Original upstream code is preserved verbatim under
 > [`src/safety_cot_heads/_legacy/`](src/safety_cot_heads/_legacy).
 
 ---
@@ -23,41 +23,47 @@ before an unsafe answer.
 **The question.** Given two interventions that produce the *same* final-answer
 attack-success rate (iso-ASR), do they disrupt the same safety subprocesses, and
 do they preserve or destroy the chain-of-thought as a safety *monitor*? See
-[docs/direction_a/direction_a_plan.md](docs/direction_a/direction_a_plan.md).
+[docs/direction_a/README.md](docs/direction_a/README.md) (design, metric
+definitions, hypotheses/thresholds).
 
-**The apparatus.** For each `(model, dataset, condition)` cell we generate
-completions, then judge them along several axes:
+**The grid.** For each `(model, dataset, condition)` cell we generate completions,
+then judge them along several metric layers.
 
-- **Intervention families** (the `condition`):
+- **Intervention families** (`condition`, 11 total):
   - `baseline` — no intervention.
   - `ships_top{3,5,8}` — ablate the top-K safety **attention heads** (SHIPS).
   - `neurons_top{256,512,1024}` — ablate the top-K safety **MLP neurons**.
-  - `steering_a{0.5,1.0,1.5}` — **activation-addition** of the (unit-normalised)
-    **refusal direction** at dose α; a negative coefficient suppresses refusal
-    (induces harm). Magnitude = `dose × add_coeff` and is comparable across
-    models. `steering_a1.0` is the iso-ASR anchor.
-  - `steering_ablate` — **full directional ablation** (Arditi et al.): project
-    the refusal direction out at every layer (α-free).
-- **Datasets:** `jbb` (JailbreakBench, 100 harmful prompts) and `bt`
-  (BeaverTails, 98 = 7×14 categories).
-- **Models:** primary `qwen3_8b` (explicit `<think>` traces) and
-  `llama31_8b_control`; configs also exist for `qwen3_4b_thinking`,
-  `r1_distill_8b`, `olmo2_7b_instruct`, `olmo2_7b_sft`, and the OLMo-3 reasoning
-  arm `olmo3_7b_think` / `olmo3_7b_base` (run via `scripts/setup_vm.sh` +
-  `scripts/run_local_pipeline.sh` on a standalone GPU VM).
+  - `steering_a{0.5,1.0,1.5}` — **activation-addition** of the unit-normalised
+    **refusal direction** at dose α (suppresses refusal → induces harm).
+    `steering_a1.0` is the iso-ASR anchor.
+  - `steering_ablate` — **full directional ablation** (Arditi et al.): project the
+    refusal direction out at every layer (α-free).
+- **Datasets:** `jbb` (JailbreakBench, 100 prompts) and `bt` (BeaverTails, 98 =
+  7×14 categories).
+- **Models (5 active):** `qwen3_8b` and `olmo3_7b_think` (explicit `<think>`
+  traces), `olmo3_7b_base`, `olmo3_7b_base_own` (interventions from base's own
+  artifacts), and `llama31_8b_control`. Config-only stubs for other models exist
+  under `configs/.../direction_a_v5_iso_asr/` but have not been run.
 
-**What the judge measures** (judge model = Qwen3-30B-A3B):
+**Two judges.**
 
-| Layer | Metrics | Status |
+| Judge | Model | Produces |
 |---|---|---|
-| Potency / quality | 5-label safety (`harmful_response`, `safe_rejection`, …), gibberish/coherence gate (`clean_rate`), **`harmful_among_clean`** (headline ASR) | primary |
-| Monitorability | CoT-only monitor → `asr_cot_pred`, monitorability gap | primary |
-| Mechanism | 12-label pathway taxonomy → 8-dim pathway vector + `dominant_pathway`; indexed safety-reasoning trace | diagnostic |
+| Standard | `Qwen/Qwen3-30B-A3B-Instruct-2507` | 5-label safety, coherence/quality gate, CoT-only monitor |
+| Pathway | fine-tuned `models/pathway_judge_14b_merged` (Qwen3-14B LoRA) | 12-label pathway taxonomy → 8-dim pathway vector + `dominant_pathway` |
 
-The metric direction is a single **Monitored Attack Score** built from potency
-(A) × output-intactness (Q) × CoT-monitor-evasion (E), with a mirrored
-Monitored *Defense* Score for safety-enhancing doses. See the prereg /
-direction-A docs for the evolving definition.
+The pathway judge is fine-tuned on HarmThoughts human annotations and validated at
+**κ ≈ 0.96 / F1 0.98** vs that gold set (baseline 30B: κ 0.21). See
+[docs/direction_a/README.md §7](docs/direction_a/README.md).
+
+**Metric layers** (per `(model,dataset,condition)` cell):
+
+| Layer | Metrics | Judge |
+|---|---|---|
+| Potency / quality | 5-label safety (`harmful_response`, `safe_rejection`, `reasoning_about_safety`, `adding_intention`, `changing_subject`); coherence gate (`clean_rate`); **`harmful_among_clean`** (headline ASR-clean) | standard |
+| Monitorability | CoT-only monitor (`asr_cot_pred`) → **monitorability gap** = `asr_final − asr_cot_pred` | standard |
+| Mechanism | 12-label pathway taxonomy → pathway vector + `dominant_pathway` | pathway (14B) |
+| (external) | indexed CoT-trace safety-reasoning | retrieved/secondary |
 
 ---
 
@@ -66,33 +72,26 @@ direction-A docs for the evolving definition.
 ```
 safety_cot_heads/
 ├── configs/
-│   ├── models.yaml                         # model + judge registry
-│   ├── datasets.yaml
-│   └── experiments/
-│       └── direction_a_v5_iso_asr/         # CURRENT work
-│           ├── matrix.yaml                 # single source of truth
-│           ├── README.md
-│           └── <model_key>/                # auto-generated by make_v5_configs
-│               ├── 01-ships-discovery.yaml
-│               ├── 16-neuron-discovery.yaml
-│               ├── 17-direction-extraction.yaml
-│               ├── gen/{jbb,bt}/<condition>.yaml
-│               └── judge.yaml
-├── scripts/                                # CLI entry points (python -m scripts.X)
-│   ├── sbatch/                             # SLURM drivers
-│   └── legacy/                             # superseded scripts staged for review
+│   ├── models.yaml  datasets.yaml
+│   └── experiments/direction_a_v5_iso_asr/      # CURRENT work
+│       ├── matrix.yaml                          # single source of truth
+│       └── <model_key>/                         # generated by make_v5_configs
+│           ├── 0*-discovery / extraction yaml
+│           ├── gen/{jbb,bt}/<condition>.yaml
+│           ├── judge.yaml         # standard 30B judge
+│           └── judge_14b.yaml     # fine-tuned pathway judge
+├── scripts/                                     # CLI entry points (python -m scripts.X)
+│   ├── run_local_pipeline.sh                    # standalone-VM driver (per model/stage)
+│   ├── run_gpu0_olmo3_judging.sh / run_gpu1_llm_judging.sh   # two-GPU launchers
+│   └── sbatch/                                  # SLURM drivers (cluster, optional)
 ├── src/safety_cot_heads/
-│   ├── direction_a/                        # pathway_taxonomy, monitorability,
-│   │                                       #   segmentation, trajectory_metrics
-│   ├── attribution/ ships_legacy/ sahara_legacy/   # head/neuron discovery
-│   ├── interventions/                      # ablation hooks, steering, surgery
-│   ├── generation/ judging/ analysis/      # generate, judge, metrics
-│   ├── data/ models/ utils/
-│   └── _legacy/                            # verbatim upstream code
-├── runs/                                   # all outputs (gen + judge + reports)
-├── logs/slurm/<type>/                      # job logs by type (see §6)
-├── docs/direction_a/                       # plan, prereg
-└── tests/
+│   ├── direction_a/      # pathway_taxonomy, monitorability, segmentation
+│   ├── interventions/    # ablation hooks, steering, surgery
+│   ├── generation/ judging/ analysis/ data/ models/ utils/
+│   └── _legacy/          # verbatim upstream code (provenance)
+├── data/annotations/                            # human-annotation validation (§6)
+├── runs/direction_a_v5/                         # all outputs (gitignored)
+├── docs/   tests/
 ```
 
 ---
@@ -100,127 +99,139 @@ safety_cot_heads/
 ## 3. One-time setup
 
 ```bash
-conda create -n safety_cot_heads python=3.11 -y
-conda activate safety_cot_heads
-cd safety_cot_heads
+# Local / CPU (tests, config gen, annotation scoring):
+python -m venv .venv && source .venv/bin/activate
 pip install -e . -r requirements.txt
-pytest -q tests/                            # no GPU / no downloads
+pytest -q tests/                                 # no GPU / no downloads
+
+# GPU VM (full pipeline): provisions env + smoke-tests model loading
+bash scripts/setup_vm.sh
 ```
 
-> **HF auth.** Llama / Qwen / OLMo weights are gated. Run `huggingface-cli
-> login`, or set `HF_TOKEN`. Set `HF_HOME=/scratch/hf` if `$HOME` is small.
+> **HF auth.** Llama / Qwen / OLMo weights are gated. Run `huggingface-cli login`
+> or set `HF_TOKEN`. Set `HF_HOME=/scratch/hf` if `$HOME` is small.
 
 ---
 
 ## 4. Reproducing the pipeline
 
-Every Python entry point takes `--config <yaml>`, optional `--overrides
-key=value …` (OmegaConf dotlist), and `--dry-run` (load data + write a plan,
-skip the model). The whole v5 grid is driven from one `matrix.yaml`.
+Every Python entry point takes `--config <yaml>`, optional `--overrides key=value …`
+(OmegaConf dotlist), and `--dry-run`. The whole grid is driven from `matrix.yaml`.
 
-### Step 0 — Generate the per-model configs
-
+### Step 0 — generate per-model configs  〔seconds〕
 ```bash
 python -m scripts.make_v5_configs \
     --matrix configs/experiments/direction_a_v5_iso_asr/matrix.yaml
-# subset: --models qwen3_8b llama31_8b_control
+# edit ONLY matrix.yaml to add a model/dose/condition; this is idempotent.
 ```
 
-Idempotent. **Edit only `matrix.yaml`** to add a model/dose/condition.
-
-### Step 1 — Run a model end-to-end (cluster, preferred)
-
-`direction_a_v5_per_model.sbatch` runs the full chain for one model:
-**discovery → generation (10 conditions × 2 datasets) → judge → report.**
-
+### Step 1 — generate completions  〔~10–40 min/cell〕
 ```bash
-sbatch --export=ALL,MODEL_KEY=qwen3_8b           scripts/sbatch/direction_a_v5_per_model.sbatch
-sbatch --export=ALL,MODEL_KEY=llama31_8b_control scripts/sbatch/direction_a_v5_per_model.sbatch
-```
-
-Local smoke (one cell, no cluster):
-
-```bash
+# one model, all conditions × both datasets:
+bash scripts/run_local_pipeline.sh qwen3_8b gen
+# single-cell smoke:
 python -m scripts.run_generation \
     --config configs/experiments/direction_a_v5_iso_asr/qwen3_8b/gen/jbb/baseline.yaml \
     --overrides dataset.n=8 batch_size=2
 ```
 
-### Step 2 — Metrics-only judging (current focus)
-
-To judge the full n=100 completions for *only* the 5-label safety judge + the
-gibberish/quality gate (skipping the expensive pathway + safety-reasoning
-passes), use the dedicated sbatch. It is **resume-safe** (per-completion) and
-calls the core driver directly:
-
+### Step 2 — standard judging (safety + coherence + monitorability)  〔~30–60 min/cell〕
 ```bash
-sbatch --export=ALL,MODEL_KEY=qwen3_8b scripts/sbatch/direction_a_v5_metrics_judge.sbatch
-# chain the next model after it finishes:
-sbatch --dependency=afterany:<JOBID> \
-       --export=ALL,MODEL_KEY=llama31_8b_control \
-       scripts/sbatch/direction_a_v5_metrics_judge.sbatch
+bash scripts/run_local_pipeline.sh qwen3_8b judge        # uses judge.yaml (30B)
+# env toggles: SKIP_PATHWAY=1 (default), SKIP_COT_ONLY=0, JUDGE_4BIT=0/1
 ```
 
-Pass-selection env vars: `SKIP_COT_ONLY=0` (also capture the monitor / E term),
-`SKIP_PATHWAY=0` (run the slow 12-label grid), `DATASETS="jbb"`, `DRY_RUN=1`.
-
-### Step 3 — Reports
-
+### Step 3 — pathway judging (fine-tuned 14B)  〔~35 min/cell light · ~2 h/cell for long-CoT〕
 ```bash
-# Coverage + metrics overview across every judge source on disk (HTML):
-python -m scripts.make_v5_metrics_status_report \
-    --out runs/direction_a_v5/metrics_status_report.html
+CUDA_VISIBLE_DEVICES=0 PATHWAY_ONLY=1 JUDGE_CONFIG=judge_14b.yaml JUDGE_BATCH=128 \
+    bash scripts/run_local_pipeline.sh qwen3_8b judge
+```
+Two GPUs at once — distribute models across cards (see the `run_gpu0_*`/`run_gpu1_*`
+launchers, which pin `CUDA_VISIBLE_DEVICES` and loop a set of models).
 
-# Per-(model,dataset) iso-ASR markdown report:
-python -m scripts.make_v4_jbb_report \
-    --in-base runs/direction_a_v5/qwen3_8b/judge/jbb \
-    --out runs/direction_a_v5/qwen3_8b/judge/jbb/v5_report.md \
-    --iso-anchor steering_a1.0
+### Step 4 — heal & report  〔seconds〕
+The standard and pathway passes write the same `summary.json`. The live writer now
+**merges** (preserves blocks it didn't recompute), but if an older pass clobbered a
+cell, re-aggregate from the surviving per-row jsonls (CPU-only, no re-judging):
+```bash
+python -m scripts.reaggregate_v5_summaries            # idempotent heal
+python -m scripts.make_v5_metrics_status_report --out runs/metrics_status_report.html
+.venv/bin/python -m scripts.make_v5_plots             # 10 analysis PNGs -> runs/plots/
 ```
 
 ---
 
-## 5. Important scripts
+## 5. Fine-tuning the pathway judge  〔one-time, several hours on 1 GPU〕
+
+```bash
+python -m scripts.prepare_harmthoughts_training_data   # build train/test from HarmThoughts
+python -m scripts.train_pathway_judge                  # Qwen3-14B LoRA, ~2 epochs
+python -m scripts.eval_pathway_judge \
+    --test-data data/pathway_judge_test.jsonl \
+    --finetuned-model models/pathway_judge_14b_merged  # F1 / Cohen's κ vs gold
+```
+Details: [docs/direction_a/README.md §7](docs/direction_a/README.md).
+
+---
+
+## 6. Validating the judges with human annotation  〔~1–2 h/annotator〕
+
+A clone-and-run web tool to certify the judges by computing **human-vs-judge
+Cohen's κ** on a blind, class-balanced sample. No GPU/model weights needed to
+annotate. Full setup for a new annotator:
+[docs/general/ANNOTATION_SETUP.md](docs/general/ANNOTATION_SETUP.md).
+
+```bash
+python -m scripts.annotate_server --batch data/annotations/batch_v5_001   # http://127.0.0.1:8765/
+python -m scripts.score_annotations --batch data/annotations/batch_v5_001 # -> validation_report.html
+```
+See [data/annotations/README.md](data/annotations/README.md) for the metric mapping.
+
+---
+
+## 7. Outputs & logs
+
+```
+runs/direction_a_v5/<model>/
+├── gen/<dataset>/<condition>/seed0/completions_<condition>.jsonl
+└── judge/<dataset>/<condition>/seed0/
+    ├── coherence.jsonl  judged_<condition>.jsonl  judge_cot_only.jsonl
+    ├── monitorability_rows.jsonl  judge_pathway*.jsonl  pathway_vectors.jsonl
+    └── summary.json                 # per-condition aggregates (std + pathway)
+```
+`runs/` is gitignored; status reports and the annotation batch are the tracked
+artifacts. Standalone-VM run logs land in `logs/`.
+
+---
+
+## 8. Important scripts
 
 | Script | Role |
 |---|---|
-| `make_v5_configs.py` | expand `matrix.yaml` → per-model configs + sbatch drivers |
-| `run_generation.py` (`run_ablation.py` alias) | generate completions for a `gen/*.yaml` cell |
-| `run_v4_jbb_judge.py` | **the live judge driver** (despite the v4 name): coherence gate, 5-label safety, pathway, cot-only; `--skip-*` toggles |
-| `complete_v5_judging.py` / `complete_v5_generation.py` | resumable orchestrators that find missing cells and finish them |
-| `run_v5_qwen_subset_judging.py` | adds the indexed safety-reasoning-trace pass on a sampled subset |
-| `make_v5_metrics_status_report.py` | HTML status + metrics overview (re-derives ASR-clean from raw files) |
-| `make_v4_jbb_report.py` | per-dataset iso-ASR markdown report |
+| `make_v5_configs.py` | expand `matrix.yaml` → per-model configs |
+| `run_local_pipeline.sh` | standalone-VM driver: `<model> {discover\|gen\|judge}` |
+| `run_generation.py` | generate completions for a `gen/*.yaml` cell |
+| `run_v4_jbb_judge.py` | **the live judge driver** (despite the v4 name): coherence, 5-label safety, pathway, cot-only; `--skip-*` toggles |
+| `reaggregate_v5_summaries.py` | CPU heal of clobbered `summary.json` from raw jsonls |
+| `make_v5_metrics_status_report.py` | filterable HTML coverage + metrics overview |
+| `make_v5_plots.py` | 10 analysis diagrams |
+| `make_annotation_batch.py` / `annotate_server.py` / `score_annotations.py` | judge-validation annotation tool (§6) |
+| `train_pathway_judge.py` / `eval_pathway_judge.py` | fine-tune + evaluate the 14B pathway judge |
 | `run_attribution.py` / `run_neuron_discovery.py` / `run_direction_extraction.py` | SHIPS heads / safety neurons / refusal direction discovery |
 
-Key SLURM drivers live in `scripts/sbatch/` (`direction_a_v5_per_model`,
-`direction_a_v5_metrics_judge`, `direction_a_v5_split_driver`).
-
 ---
 
-## 6. Outputs & logs
-
-```
-runs/direction_a_v5/<model_key>/
-├── gen/<dataset>/<condition>/seed0/completions_<condition>.jsonl
-└── judge/<dataset>/<condition>/seed0/
-    ├── coherence.jsonl  judge_safety__<label>.jsonl  judged_<condition>.jsonl
-    ├── judge_cot_only.jsonl  monitorability_rows.jsonl
-    └── summary.json                 # per-condition aggregates
-```
-
-SLURM logs are organized by job type under
-`logs/slurm/{generation,judging,discovery,analysis,pipeline,smoke}/`; the sbatch
-`--output`/`--error` paths route new runs into the right folder.
-
----
-
-## 7. Tests & legacy
+## 9. Tests & legacy
 
 ```bash
 pytest -q tests/        # masks, JSON judge parsing, head selection, metrics — no GPU
 ```
+Upstream code runs verbatim from `src/safety_cot_heads/_legacy/`.
 
-The original upstream scripts still run from `_legacy/`
-(`python -m safety_cot_heads._legacy.sha.get_ships`, etc.). Superseded
-in-house scripts are staged under `scripts/legacy/` for review, not deleted.
+---
+
+> **Timing footnotes** 〔…〕 are rough wall-clock on a single ~140 GB-VRAM GPU
+> (e.g. H200). The dominant driver for judging is **CoT length**: long-reasoning
+> models (`olmo3_7b_think`) build 5–16k pathway prefix-rows per cell and take
+> ~3–5× longer than `qwen3_8b`/base models. A full pathway pass for one model
+> (22 cells) is ~10–13 h for base/control models and ~20–24 h for `think`.

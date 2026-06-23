@@ -62,6 +62,22 @@ from safety_cot_heads.utils import (
 log = get_logger(__name__)
 
 
+def write_summary_merge(path: Path, summary: dict, *, overwrite: bool = False) -> None:
+    """Write summary.json non-destructively: update only the blocks this run
+    computed, preserving any others already on disk. This prevents a partial
+    pass (e.g. pathway-only via --skip-safety) from clobbering the std metrics
+    written by an earlier pass. Pass overwrite=True for an intentional rebuild.
+    """
+    if not overwrite and path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            existing = {}
+        existing.update(summary)
+        summary = existing
+    json_dump(path, summary)
+
+
 # ---------------------------------------------------------------------------
 # Condition spec parsing
 # ---------------------------------------------------------------------------
@@ -411,10 +427,10 @@ def _process_condition(judge, cfg, spec: dict, out_dir: Path,
                  len(merged_pathway))
 
     # ---------- 5. pathway vectors + monitorability ---------------------
+    judge_name = getattr(judge, "name", None)
     summary: dict = {
         "condition": cond_name,
         "tag": spec["tag"],
-        "judge_model": getattr(judge, "name", None),
         "n_completions": len(completions),
         "n_prefix_rows": len(prefix_rows),
     }
@@ -443,7 +459,15 @@ def _process_condition(judge, cfg, spec: dict, out_dir: Path,
             coherence_rows, final_judge_rows,
         )
 
-    json_dump(out_dir / "summary.json", summary)
+    # Judge-model attribution: a std pass owns `judge_model`; a pathway-only pass
+    # owns `pathway_judge_model` so the merge below won't overwrite the safety
+    # judge string recorded by an earlier std pass.
+    if "per_condition_basic" in summary:
+        summary["judge_model"] = judge_name
+    if "per_condition_pathway" in summary and "per_condition_basic" not in summary:
+        summary["pathway_judge_model"] = judge_name
+
+    write_summary_merge(out_dir / "summary.json", summary)
     log.info("wrote summary.json for condition %s", cond_name)
     return summary
 

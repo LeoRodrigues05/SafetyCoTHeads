@@ -50,6 +50,9 @@ SOURCES = (
 DISPLAY = {
     "qwen3_8b": "Qwen3 8B",
     "llama31_8b_control": "Llama 3.1 8B",
+    "olmo3_7b_think": "OLMo-3 7B Think",
+    "olmo3_7b_base": "OLMo-3 7B Base",
+    "olmo3_7b_base_own": "OLMo-3 7B Base (own)",
     "jbb": "JBB",
     "bt": "BT",
 }
@@ -135,9 +138,28 @@ def _badge(status: str) -> str:
 # ---------------------------------------------------------------------------
 # Cell discovery
 # ---------------------------------------------------------------------------
-def _collect_cells() -> list[dict]:
+def _discover_models() -> tuple[str, ...]:
+    """Auto-discover every model with a judge tree on disk.
+
+    Scans ``runs/direction_a_v5/<model>/judge`` for any ``summary.json`` so new
+    models (e.g. the OLMo-3 arms) appear without editing the hardcoded list.
+    Skips internal dirs (``_smoke_vm`` etc.). Falls back to ``MODELS``.
+    """
+    if not RUN_ROOT.exists():
+        return MODELS
+    found: list[str] = []
+    for d in sorted(RUN_ROOT.iterdir()):
+        if not d.is_dir() or d.name.startswith("_"):
+            continue
+        if any((d / src).rglob("summary.json") for src, _ in SOURCES
+               if (d / src).exists()):
+            found.append(d.name)
+    return tuple(found) or MODELS
+
+
+def _collect_cells(models=None) -> list[dict]:
     cells: list[dict] = []
-    for model in MODELS:
+    for model in (models or _discover_models()):
         for root_name, src_label in SOURCES:
             root = RUN_ROOT / model / root_name
             if not root.exists():
@@ -219,7 +241,7 @@ h2{margin:30px 0 10px;font-size:18px;}
 p{color:var(--muted);line-height:1.45;margin:6px 0;}
 table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);margin:10px 0 16px;}
 th,td{border-bottom:1px solid #e7ebef;padding:7px 9px;text-align:left;font-size:13px;vertical-align:top;}
-th{background:var(--soft);font-weight:650;color:#24313a;position:sticky;top:0;}
+th{background:var(--soft);font-weight:650;color:#24313a;}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
 .badge{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;}
 .badge.good{background:#e7f6ee;color:#137a43;border:1px solid #a6dcc0;}
@@ -231,22 +253,96 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
 .stat .value{margin-top:6px;font-size:24px;font-weight:720;}
 tr:hover td{background:#fbfcfd;}
 .src{font-size:11px;color:var(--muted);}
+.filters{position:sticky;top:0;z-index:5;display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--bg);padding:11px 12px;margin:0 0 14px;border:1px solid var(--line);border-radius:8px;}
+.filters label{font-size:13px;color:#24313a;font-weight:600;}
+.filters select{font-size:13px;margin-left:4px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:#fff;}
+.filters button{font-size:12px;padding:5px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;}
+.filters button:hover{background:var(--soft);}
 """
 
 
-def _table(headers, rows, numeric=None) -> str:
+def _table(headers, rows, numeric=None, row_meta=None) -> str:
+    """Render a table. When ``row_meta`` is given (one dict per row with
+    model/src/dataset/condition keys), the table is marked ``filterable`` and
+    each row carries ``data-*`` attributes the client-side filter bar reads."""
     numeric = numeric or set()
-    out = ["<table><thead><tr>"]
+    tbl_cls = ' class="filterable"' if row_meta is not None else ""
+    out = [f"<table{tbl_cls}><thead><tr>"]
     for i, h in enumerate(headers):
         out.append(f'<th{" class=num" if i in numeric else ""}>{html.escape(h)}</th>')
     out.append("</tr></thead><tbody>")
-    for row in rows:
-        out.append("<tr>")
+    for j, row in enumerate(rows):
+        attrs = ""
+        if row_meta is not None:
+            m = row_meta[j]
+            attrs = (f' data-model="{html.escape(m["model"])}"'
+                     f' data-src="{html.escape(m["src"])}"'
+                     f' data-dataset="{html.escape(m["dataset"])}"'
+                     f' data-condition="{html.escape(m["condition"])}"')
+        out.append(f"<tr{attrs}>")
         for i, cell in enumerate(row):
             out.append(f'<td{" class=num" if i in numeric else ""}>{cell}</td>')
         out.append("</tr>")
     out.append("</tbody></table>")
     return "\n".join(out)
+
+
+def _metas(cells: list[dict]) -> list[dict]:
+    return [{"model": c["model"], "src": c["src"],
+             "dataset": c["dataset"], "condition": c["condition"]} for c in cells]
+
+
+def _filter_bar(cells: list[dict]) -> str:
+    """Sticky control bar: dropdowns that filter every ``filterable`` table by
+    model / dataset / source / condition, entirely client-side."""
+    def _select(key: str, label: str) -> str:
+        vals = sorted({c[key] for c in cells})
+        opts = ['<option value="">All</option>']
+        for v in vals:
+            opts.append(f'<option value="{html.escape(v)}">{html.escape(_disp(v))}</option>')
+        return (f'<label>{html.escape(label)} '
+                f'<select id="f_{key}" onchange="applyFilters()">{"".join(opts)}</select>'
+                f'</label>')
+    return (
+        '<div class="filters">'
+        + _select("model", "Model") + _select("dataset", "Dataset")
+        + _select("src", "Source") + _select("condition", "Condition")
+        + '<button type="button" onclick="resetFilters()">Reset</button>'
+        + '<span id="filtCount" class="src"></span></div>'
+    )
+
+
+FILTER_JS = """
+<script>
+function _v(id){var e=document.getElementById(id);return e?e.value:'';}
+function applyFilters(){
+  var f={model:_v('f_model'),dataset:_v('f_dataset'),src:_v('f_src'),condition:_v('f_condition')};
+  var total=0,shown=0;
+  document.querySelectorAll('table.filterable').forEach(function(t){
+    var vis=0;
+    t.querySelectorAll('tbody tr').forEach(function(tr){
+      total++;
+      var ok=(!f.model||tr.dataset.model===f.model)
+           &&(!f.dataset||tr.dataset.dataset===f.dataset)
+           &&(!f.src||tr.dataset.src===f.src)
+           &&(!f.condition||tr.dataset.condition===f.condition);
+      tr.style.display=ok?'':'none'; if(ok){vis++;shown++;}
+    });
+    t.style.display=vis?'':'none';
+    var h=t.previousElementSibling;
+    while(h&&h.tagName!=='H2'&&h.tagName!=='TABLE'){h=h.previousElementSibling;}
+  });
+  var fc=document.getElementById('filtCount');
+  if(fc)fc.textContent='showing '+shown+' / '+total+' row-instances';
+}
+function resetFilters(){
+  ['f_model','f_dataset','f_src','f_condition'].forEach(function(id){
+    var e=document.getElementById(id); if(e)e.value='';});
+  applyFilters();
+}
+document.addEventListener('DOMContentLoaded',applyFilters);
+</script>
+"""
 
 
 def _id_cols(c: dict) -> list[str]:
@@ -303,7 +399,7 @@ def _status_table(cells: list[dict]) -> str:
             _badge(c["std_status"]), _badge(c["mon_status"]),
             _badge(c["pw_status"]), _badge(c["sr_status"]),
         ])
-    return _table(headers, rows, numeric={4})
+    return _table(headers, rows, numeric={4}, row_meta=_metas(cells))
 
 
 def _core_metrics_table(cells: list[dict]) -> str:
@@ -320,7 +416,7 @@ def _core_metrics_table(cells: list[dict]) -> str:
             _pct(coh.get("clean_rate")), asr_clean,
             _pct(b.get("reasoning_rate")),
         ])
-    return _table(headers, rows, numeric=set(range(4, 9)))
+    return _table(headers, rows, numeric=set(range(4, 9)), row_meta=_metas(cells))
 
 
 def _monitor_table(cells: list[dict]) -> str:
@@ -333,7 +429,7 @@ def _monitor_table(cells: list[dict]) -> str:
             _pct(m.get("asr_final")), _pct(m.get("asr_cot_pred")),
             _num(m.get("gap"), "+.3f"),
         ])
-    return _table(headers, rows, numeric={4, 5, 6})
+    return _table(headers, rows, numeric={4, 5, 6}, row_meta=_metas(cells))
 
 
 def _cot_trace_table(cells: list[dict]) -> str:
@@ -357,7 +453,7 @@ def _cot_trace_table(cells: list[dict]) -> str:
             str(hist.get("intent_assessment", "n/a") if sr else "n/a"),
             str(hist.get("refusal_reasoning", "n/a") if sr else "n/a"),
         ])
-    return _table(headers, rows, numeric=set(range(4, 12)))
+    return _table(headers, rows, numeric=set(range(4, 12)), row_meta=_metas(cells))
 
 
 def _pathway_table(cells: list[dict]) -> str:
@@ -376,7 +472,7 @@ def _pathway_table(cells: list[dict]) -> str:
             _pct(pw.get("operational_detail_rate")) if pw else "n/a",
             html.escape(dom_str),
         ])
-    return _table(headers, rows, numeric={4, 5, 6, 7})
+    return _table(headers, rows, numeric={4, 5, 6, 7}, row_meta=_metas(cells))
 
 
 def build_report(cells: list[dict]) -> str:
@@ -384,6 +480,7 @@ def build_report(cells: list[dict]) -> str:
     generated = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
     body = [
         _stat_cards(cells),
+        _filter_bar(cells),
         "<h2>1. Judges / instruments</h2>", _judges_table(cells),
         "<h2>2. Coverage &amp; status</h2>",
         "<p>complete = pass ran and aggregated; partial = summary present but a "
@@ -407,14 +504,16 @@ def build_report(cells: list[dict]) -> str:
 <title>Direction A v5 — Metrics &amp; Status</title><style>{CSS}</style></head>
 <body><main><header><h1>Direction A v5 — Metrics &amp; Judging Status</h1>
 <p>Generated {html.escape(generated)}. Sources: full = n=100 judge tree, n25 = 25-row subset.</p>
-</header>{''.join(body)}</main></body></html>"""
+</header>{''.join(body)}</main>{FILTER_JS}</body></html>"""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(RUN_ROOT / "metrics_status_report.html"))
+    ap.add_argument("--models", nargs="+", default=None,
+                    help="Restrict to these model keys (default: all MODELS)")
     args = ap.parse_args()
-    cells = _collect_cells()
+    cells = _collect_cells(models=tuple(args.models) if args.models else None)
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(build_report(cells), encoding="utf-8")

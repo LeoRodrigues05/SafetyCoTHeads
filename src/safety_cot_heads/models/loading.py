@@ -70,9 +70,9 @@ def load_model(
         Forwarded to HF (e.g. ``'auto'`` for multi-GPU). Mutually exclusive
         with ``device``.
     """
-    torch_dtype = _resolve_dtype(dtype)
+    resolved_dtype = _resolve_dtype(dtype)
 
-    kwargs = {"torch_dtype": torch_dtype, "trust_remote_code": trust_remote_code}
+    kwargs = {"dtype": resolved_dtype, "trust_remote_code": trust_remote_code}
     if attn_implementation is not None:
         kwargs["attn_implementation"] = attn_implementation
 

@@ -85,7 +85,7 @@ olmo2_7b_instruct:
 # OLMo-3 7B Base — pretrained completion model, no chat template (generation
 # falls back to the SHIPS query/answer template). Stage-0 / pre-alignment arm.
 olmo3_7b_base:
-  name: allenai/Olmo-3-7B-Base
+  name: allenai/Olmo-3-1025-7B
   dtype: bfloat16
   attn_implementation: eager
   load_in_4bit: false

@@ -1,0 +1,19 @@
+tracker:
+  experiment: direction_a_v5
+  run: v5_judge_pathway_14b
+  status: template  # update model.name after training + merging
+model:
+  name: models/pathway_judge_14b_merged  # set to absolute path or HF repo after merge
+  dtype: bfloat16
+  load_in_4bit: false
+  device_map: auto
+  trust_remote_code: false
+max_new_tokens: 96
+base_temperature: 0.0
+retry_temperature: 0.3
+max_retries: 2
+batch_size: 48
+use_chat_template: true
+seed: 0
+n_limit: null
+gate_safety_by_coherence: true

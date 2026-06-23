@@ -16,3 +16,19 @@ logs/
 *.pt
 *.pth
 .cache/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Build / editable-install artifacts
+*.egg-info/
+build/
+dist/
+
+# Large local artifacts (model weights, fine-tune datasets)
+models/
+data/pathway_judge_*.jsonl
