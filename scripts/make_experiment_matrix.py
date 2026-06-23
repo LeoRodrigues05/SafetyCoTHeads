@@ -32,7 +32,7 @@ def main() -> int:
     for combo in itertools.product(*(axes[k] for k in keys)):
         cell = dict(base)
         for k, v in zip(keys, combo):
-            cell[k] = v
+            cell[k] = vd
         slug = "__".join(str(v).replace("/", "_") for v in combo)
         path = out_dir / f"{slug}.yaml"
         with path.open("w") as f:

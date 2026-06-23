@@ -1,0 +1,23 @@
+tracker:
+  experiment: direction_a_v5
+  run: baseline_olmo3_7b_base_own_bt
+  status: runnable
+seed: 0
+condition: baseline
+model:
+  name: allenai/Olmo-3-1025-7B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: 7
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 512
+batch_size: 4
+output:
+  dir: runs/direction_a_v5/olmo3_7b_base_own/gen/bt/baseline/seed0
+system_prompt: null

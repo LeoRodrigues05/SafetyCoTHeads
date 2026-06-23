@@ -5,7 +5,7 @@ tracker:
 seed: 0
 condition: steering_a0.5
 model:
-  name: allenai/Olmo-3-7B-Base
+  name: allenai/Olmo-3-1025-7B
   dtype: bfloat16
   attn_implementation: eager
 dataset:

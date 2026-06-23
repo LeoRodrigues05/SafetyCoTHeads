@@ -1,0 +1,45 @@
+{
+  "batch_id": "batch_v5_001",
+  "created": "2026-06-22T20:21:23.103267+00:00",
+  "run_root": "runs/direction_a_v5",
+  "seed": 0,
+  "n_requested": {
+    "safety": 80,
+    "cot": 40
+  },
+  "n_realized": {
+    "safety": 80,
+    "cot": 40,
+    "total": 120
+  },
+  "judge_models": {
+    "safety": {
+      "Qwen/Qwen3-30B-A3B-Instruct-2507": 9172
+    },
+    "cot_only": {
+      "Qwen/Qwen3-30B-A3B-Instruct-2507": 9146
+    }
+  },
+  "rubric_source": "src/safety_cot_heads/judging/judge_prompts.py (SAFETY_BEHAVIOR_PROMPT / SAFETY_LABEL_DEFINITIONS / COT_ONLY_PREDICTION_PROMPT)",
+  "by_type_model_dataset": {
+    "cot_only|llama31_8b_control|bt": 4,
+    "cot_only|llama31_8b_control|jbb": 4,
+    "cot_only|olmo3_7b_base|bt": 4,
+    "cot_only|olmo3_7b_base|jbb": 8,
+    "cot_only|olmo3_7b_base_own|bt": 6,
+    "cot_only|olmo3_7b_think|bt": 4,
+    "cot_only|olmo3_7b_think|jbb": 6,
+    "cot_only|qwen3_8b|bt": 2,
+    "cot_only|qwen3_8b|jbb": 2,
+    "safety_5label|llama31_8b_control|bt": 8,
+    "safety_5label|llama31_8b_control|jbb": 8,
+    "safety_5label|olmo3_7b_base|bt": 12,
+    "safety_5label|olmo3_7b_base|jbb": 6,
+    "safety_5label|olmo3_7b_base_own|bt": 8,
+    "safety_5label|olmo3_7b_base_own|jbb": 8,
+    "safety_5label|olmo3_7b_think|bt": 6,
+    "safety_5label|olmo3_7b_think|jbb": 6,
+    "safety_5label|qwen3_8b|bt": 10,
+    "safety_5label|qwen3_8b|jbb": 8
+  }
+}

@@ -66,7 +66,7 @@ models:
   olmo3_7b_think:
     model_ref: olmo3_7b_think
     max_new_tokens: 2048      # reasoning model: room for <think> + final answer
-    batch_size: 2
+    batch_size: 16            # B200 has 183 GB; model is 14 GB → plenty of headroom
     # Thinking is ON by default for Olmo-3-Think (no chat_overrides needed).
     # This is the discovery PARENT (safety circuitry is discovered on the
     # aligned/reasoning checkpoint).
@@ -78,6 +78,18 @@ models:
     # checkpoint's discovery artifacts (identical olmo3 dims) so the ablation
     # set is matched across the contrast — mirrors olmo2_sft <- olmo2_instruct.
     reuse_discovery_from: olmo3_7b_think
+  olmo3_7b_base_own:
+    model_ref: olmo3_7b_base
+    max_new_tokens: 512
+    batch_size: 4
+    # Same base checkpoint as olmo3_7b_base but ablated/steered using circuits
+    # discovered from the base model itself rather than reused from think.
+    # Lets us empirically test whether the base model has its own safety-relevant
+    # representations rather than assuming it doesn't.
+    reuse_discovery_paths:
+      ships: runs/direction_a_v5/olmo3_7b_base/01-ships-discovery/ships_dataset_ranking.json
+      neurons: runs/direction_a_v5/olmo3_7b_base/16-neuron-discovery/neuron_ranking.json
+      direction: runs/direction_a_v5/olmo3_7b_base/17-direction-extraction/refusal_directions.npz
   llama31_8b_control:
     model_ref: llama31_8b_instruct
     max_new_tokens: 512
