@@ -51,6 +51,17 @@ SAFETY_LABELS = [
     "changing_subject",
 ]
 
+# Tier-2 sentence-level safety-reasoning categories (mirror the SR judge prompt
+# enum in src/safety_cot_heads/judging/judge_prompts.py).
+SR_CATEGORIES = [
+    "risk_acknowledgment",
+    "policy_boundary",
+    "intent_assessment",
+    "refusal_reasoning",
+    "safer_alternative",
+    "other_safety_reasoning",
+]
+
 
 # --------------------------------------------------------------------------- #
 def read_jsonl(p: str | Path) -> list[dict]:
@@ -81,11 +92,13 @@ def discover_cells(run_root: str) -> list[tuple[str, str, str, str]]:
 
 
 def build_pools(cells, run_root):
-    """Build candidate task pools (with held-out labels) for both task types."""
+    """Build candidate task pools (with held-out labels) for all task types."""
     safety_pool: list[dict] = []
     cot_pool: list[dict] = []
+    sr_pool: list[dict] = []
     judge_models = Counter()
     cot_judge_models = Counter()
+    sr_judge_models = Counter()
 
     for cell_dir, model, ds, cond in cells:
         # --- completions (source of prompt + full response) ---
@@ -143,7 +156,39 @@ def build_pools(cells, run_root):
                 "_unsafe": bool(cot_lab[cid]),
             })
 
-    return safety_pool, cot_pool, judge_models, cot_judge_models
+        # --- safety-reasoning pool (Tier 2; sentence-level over the indexed trace) ---
+        # The SR judge row carries both the indexed trace it saw (`trace_segments`)
+        # and its per-sentence verdict (`judge_flat`), so the human annotates the
+        # exact same sentences and we can score per-sentence kappa.
+        for r in read_jsonl(os.path.join(cell_dir, "judge_safety_reasoning_trace.jsonl")):
+            flat = r.get("judge_flat")
+            segs = r.get("trace_segments")
+            if not flat or not segs:
+                continue  # unparsed row or missing trace -> no gold to compare
+            cid = str(r.get("id"))
+            jspans = {}
+            for s in flat.get("safety_reasoning_sentence_indexes") or []:
+                gi = s.get("global_index")
+                if gi is not None:
+                    jspans[str(int(gi))] = s.get("category")
+            if r.get("judge_model"):
+                sr_judge_models[r["judge_model"]] += 1
+            sr_pool.append({
+                "task_type": "safety_reasoning",
+                "model": model, "dataset": ds, "condition": cond, "id": cid,
+                "prompt": (comp_by_id.get(cid, {}).get("prompt") or ""),
+                "segments": [{"global_index": s.get("global_index"),
+                              "section": s.get("section"),
+                              "index": s.get("index"),
+                              "text": s.get("text")} for s in segs],
+                "_label": {"spans": jspans,
+                           "has_safety_reasoning": bool(flat.get("has_safety_reasoning"))},
+                "_judge_model": r.get("judge_model"),
+                "_unsafe": bool(flat.get("has_safety_reasoning")),
+            })
+
+    return (safety_pool, cot_pool, sr_pool,
+            judge_models, cot_judge_models, sr_judge_models)
 
 
 def stratified_sample(pool, n, seed, used_keys, unsafe_frac=0.5):
@@ -209,6 +254,9 @@ def main() -> int:
     ap.add_argument("--batch-id", default="batch_v5_001")
     ap.add_argument("--n-safety", type=int, default=80)
     ap.add_argument("--n-cot", type=int, default=40)
+    ap.add_argument("--n-sr", type=int, default=0,
+                    help="number of Tier-2 sentence-level safety-reasoning traces to sample "
+                         "(0 = omit). Each is expensive to annotate, so keep this small.")
     ap.add_argument("--unsafe-frac", type=float, default=0.5,
                     help="target fraction of judged-unsafe items (balanced=0.5 for stable kappa)")
     ap.add_argument("--seed", type=int, default=0)
@@ -216,15 +264,16 @@ def main() -> int:
 
     cells = discover_cells(args.run_root)
     print(f"discovered {len(cells)} judge cells under {args.run_root}")
-    safety_pool, cot_pool, jm, cjm = build_pools(cells, args.run_root)
-    print(f"candidate pools: {len(safety_pool)} safety, {len(cot_pool)} cot")
+    safety_pool, cot_pool, sr_pool, jm, cjm, srjm = build_pools(cells, args.run_root)
+    print(f"candidate pools: {len(safety_pool)} safety, {len(cot_pool)} cot, {len(sr_pool)} safety_reasoning")
 
     used: set[tuple] = set()
     sel_safety = stratified_sample(safety_pool, args.n_safety, args.seed, used, args.unsafe_frac)
     sel_cot = stratified_sample(cot_pool, args.n_cot, args.seed + 1, used, args.unsafe_frac)
+    sel_sr = stratified_sample(sr_pool, args.n_sr, args.seed + 2, used, args.unsafe_frac)
 
-    # Deterministic interleave so the annotator doesn't do all-safety then all-cot.
-    combined = sel_safety + sel_cot
+    # Deterministic interleave so the annotator doesn't do all of one type in a row.
+    combined = sel_safety + sel_cot + sel_sr
     random.Random(args.seed + 7).shuffle(combined)
 
     tasks, judge_labels = [], {}
@@ -238,15 +287,19 @@ def main() -> int:
         if t["task_type"] == "safety_5label":
             blind["response"] = t["response"]
             judge_labels[tid] = {**t["_labels"], "judge_model": t.get("_judge_model")}
+        elif t["task_type"] == "safety_reasoning":
+            blind["segments"] = t["segments"]
+            judge_labels[tid] = {**t["_label"], "judge_model": t.get("_judge_model")}
         else:
             blind["cot_text"] = t["cot_text"]
             judge_labels[tid] = {**t["_label"], "judge_model": t.get("_judge_model")}
         tasks.append(blind)
 
     # Blinding guard: no held-out judge field may leak into the blind task set.
+    # (`segments` is the trace TEXT the human annotates, not a judge label.)
     LEAK = {"harmful_response", "safe_rejection", "reasoning_about_safety",
             "adding_intention", "changing_subject", "cot_predicts_unsafe",
-            "asr_final", "judge_model"}
+            "asr_final", "judge_model", "spans", "has_safety_reasoning"}
     for t in tasks:
         assert not (set(t) & LEAK), f"blinding leak in {t['task_id']}: {set(t) & LEAK}"
 
@@ -261,20 +314,24 @@ def main() -> int:
         "created": datetime.now(timezone.utc).isoformat(),
         "run_root": args.run_root,
         "seed": args.seed,
-        "n_requested": {"safety": args.n_safety, "cot": args.n_cot},
-        "n_realized": {"safety": len(sel_safety), "cot": len(sel_cot), "total": len(tasks)},
-        "judge_models": {"safety": dict(jm), "cot_only": dict(cjm)},
+        "n_requested": {"safety": args.n_safety, "cot": args.n_cot, "safety_reasoning": args.n_sr},
+        "n_realized": {"safety": len(sel_safety), "cot": len(sel_cot),
+                       "safety_reasoning": len(sel_sr), "total": len(tasks)},
+        "judge_models": {"safety": dict(jm), "cot_only": dict(cjm), "safety_reasoning": dict(srjm)},
         "rubric_source": "src/safety_cot_heads/judging/judge_prompts.py "
-                         "(SAFETY_BEHAVIOR_PROMPT / SAFETY_LABEL_DEFINITIONS / COT_ONLY_PREDICTION_PROMPT)",
+                         "(SAFETY_BEHAVIOR_PROMPT / SAFETY_LABEL_DEFINITIONS / "
+                         "COT_ONLY_PREDICTION_PROMPT / SAFETY_REASONING_TRACE_PROMPT)",
         "by_type_model_dataset": {f"{a}|{b}|{c}": n for (a, b, c), n in sorted(strata_counts.items())},
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     n_unsafe_s = sum(1 for t in sel_safety if t["_unsafe"])
     n_unsafe_c = sum(1 for t in sel_cot if t["_unsafe"])
+    n_sr_pos = sum(1 for t in sel_sr if t["_unsafe"])
     print(f"\nwrote {len(tasks)} blind tasks -> {out}/tasks.json")
     print(f"  safety: {len(sel_safety)} ({n_unsafe_s} judged-harmful)")
     print(f"  cot   : {len(sel_cot)} ({n_unsafe_c} judged cot-unsafe)")
+    print(f"  safety_reasoning: {len(sel_sr)} ({n_sr_pos} judged has-safety-reasoning)")
     print(f"  models covered: {sorted({t['model'] for t in tasks})}")
     print(f"  judge_labels.json covers all task_ids: {set(judge_labels) == {t['task_id'] for t in tasks}}")
     print(f"\nNext: python -m scripts.annotate_server --batch {out}")

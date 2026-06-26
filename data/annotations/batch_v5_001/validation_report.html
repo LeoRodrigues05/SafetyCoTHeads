@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Judge validation - batch_v5_001</title><style>
+body{margin:0;background:#0f1419;color:#e6edf3;font:14px/1.55 -apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:0 0 40px}
+header{background:#0b0f14;border-bottom:1px solid #2e3a47;padding:14px 22px}
+h1{margin:0;font-size:19px;color:#4f9cf9} h2{font-size:15px;margin:22px 22px 8px;border-bottom:1px solid #2e3a47;padding-bottom:5px}
+.muted{color:#9aa7b4;margin:6px 22px} .ok{color:#3fb950}
+.cards{display:flex;gap:14px;padding:16px 22px;flex-wrap:wrap}
+.card{background:#1a2029;border:1px solid #2e3a47;border-radius:10px;padding:14px 18px;min-width:180px}
+.card .lbl{font-size:11px;text-transform:uppercase;color:#9aa7b4;letter-spacing:.5px}
+.card .big{font-size:30px;font-weight:700;margin:4px 0} .card .sub{font-size:12px;color:#9aa7b4}
+table{border-collapse:collapse;margin:4px 22px;font-size:13px}
+th,td{border:1px solid #2e3a47;padding:6px 10px;text-align:center} th{background:#222b36;color:#9aa7b4;font-weight:600}
+td:first-child,th:first-child{text-align:left} .cm{font:12px monospace;color:#9aa7b4}
+</style></head><body>
+<header><h1>v5 judge validation - batch_v5_001</h1>
+<div class="muted">2026-06-26T12:29:58.709337+00:00 · annotators: Leo ·
+2/120 tasks annotated · <span class="ok">max |hand-rolled - sklearn| kappa diff = 0.0000</span></div></header>
+<div class="cards">
+<div class="card"><div class="lbl">kappa - harmful_response (= ASR)</div><div class="big" style="color:#3fb950">+1.000</div><div class="sub">almost perfect · n=2 · agree 100%</div></div>
+<div class="card"><div class="lbl">kappa - cot_predicts_unsafe</div><div class="big">-</div></div>
+<div class="card"><div class="lbl">kappa - safe_rejection</div><div class="big" style="color:#ff8c69">+0.000</div><div class="sub">slight · n=2 · agree 50%</div></div>
+
+</div>
+<h2>Human vs judge - per label (human = gold, judge = prediction)</h2>
+<table><tr><th>label</th><th>n</th><th>agreement</th><th>Cohen kappa</th><th>precision</th><th>recall</th><th>F1</th><th class="cm">tp/fp/fn/tn</th></tr><tr><td><b>harmful_response</b></td><td>2</td><td>1.000</td><td style="color:#3fb950;font-weight:600">+1.000<br><span style="font-size:10px">almost perfect</span></td><td>1.000</td><td>1.000</td><td>1.000</td><td class="cm">1/0/0/1</td></tr><tr><td><b>safe_rejection</b></td><td>2</td><td>0.500</td><td style="color:#ff8c69;font-weight:600">+0.000<br><span style="font-size:10px">slight</span></td><td>0.000</td><td>0.000</td><td>0.000</td><td class="cm">0/0/1/1</td></tr><tr><td><b>reasoning_about_safety</b></td><td>2</td><td>1.000</td><td style="color:#3fb950;font-weight:600">+1.000<br><span style="font-size:10px">almost perfect</span></td><td>1.000</td><td>1.000</td><td>1.000</td><td class="cm">1/0/0/1</td></tr><tr><td><b>adding_intention</b></td><td>2</td><td>1.000</td><td style="color:#3fb950;font-weight:600">+1.000<br><span style="font-size:10px">almost perfect</span></td><td>1.000</td><td>1.000</td><td>1.000</td><td class="cm">1/0/0/1</td></tr><tr><td><b>changing_subject</b></td><td>2</td><td>0.500</td><td style="color:#ff8c69;font-weight:600">+0.000<br><span style="font-size:10px">slight</span></td><td>0.000</td><td>0.000</td><td>0.000</td><td class="cm">0/1/0/1</td></tr></table>
+<p class="muted">Landis-Koch: &lt;0.2 slight · 0.2-0.4 fair · 0.4-0.6 moderate · 0.6-0.8 substantial · &gt;0.8 almost perfect.</p>
+<h2>Per-annotator kappa (human vs judge)</h2><table><tr><th>annotator</th><th>harmful_response</th><th>safe_rejection</th><th>reasoning_about_safety</th><th>adding_intention</th><th>changing_subject</th><th>cot_predicts_unsafe</th></tr><tr><td><b>Leo</b></td><td style="color:#3fb950">+1.00<br><span style="font-size:10px;color:#9aa7b4">n2</span></td><td style="color:#ff8c69">+0.00<br><span style="font-size:10px;color:#9aa7b4">n2</span></td><td style="color:#3fb950">+1.00<br><span style="font-size:10px;color:#9aa7b4">n2</span></td><td style="color:#3fb950">+1.00<br><span style="font-size:10px;color:#9aa7b4">n2</span></td><td style="color:#ff8c69">+0.00<br><span style="font-size:10px;color:#9aa7b4">n2</span></td><td style="color:#5a6776">·</td></tr></table>
+
+<h2>Inter-annotator agreement</h2><p class="muted">Only one annotator (or no overlap). Add a 2nd annotator on shared items to get the human-human reliability ceiling - human-vs-judge kappa cannot exceed it.</p>
+
+</body></html>

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m scripts.make_annotation_batch --n-safety 80 --n-cot 40 --seed 0)",
+      "Bash(.venv/bin/python -m scripts.annotate_server --batch data/annotations/batch_v5_001 --port 8765)",
+      "Bash(python -m scripts.run_v5_safety_reasoning --dry-run)"
+    ]
+  }
+}

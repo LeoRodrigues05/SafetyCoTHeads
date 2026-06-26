@@ -6,14 +6,25 @@ is — the metrics, controls, and the "selective failure vs. generic degradation
 question that motivates the current pipeline. (The reference paper is at
 [../papers/On_the_Role_of_Attention_Heads_LLM_Safety.pdf](../papers/On_the_Role_of_Attention_Heads_LLM_Safety.pdf).)
 
+> **Headline framing** lives in
+> [EVALUATION_FRAMEWORK.md](EVALUATION_FRAMEWORK.md): the project is an *evaluation*
+> contribution — a **comparative** study of intervention methods plus a **proposed
+> standardized metric** over three axes (Potency, Quality, Safety-Reasoning). This
+> doc is the methodology background that grounds those axes; the metric catalogue
+> below is tagged by axis.
+
 ---
 
 ## 1. North star
 
-> Distinguish **selective safety failure** (the intervention removed safety while
-> leaving the model capable and coherent) from **generic model degradation** (the
-> intervention just broke the model). CoT traces are **behavioral signals to be
-> causally validated**, not direct evidence of internal reasoning.
+> Intervention methods can't currently be compared head-to-head (each reports its own
+> ASR). Provide that comparison and a reusable composite metric. The metric's core
+> discriminator is the **Potency × Quality** distinction: separate **selective safety
+> failure** (safety removed, model still capable and coherent) from **generic model
+> degradation** (the model just broke) — and add a **Safety-Reasoning** axis for
+> whether the visible trace still engages safety / stays monitorable. CoT traces are
+> **behavioral signals to be causally validated**, not direct evidence of internal
+> reasoning.
 
 ## 2. Why naïve metrics mislead (the load-bearing finding)
 
@@ -33,15 +44,20 @@ Two confounds the headline number must survive:
 outputs** (`harmful_among_clean`), measured with a paired design against a
 layer-matched control.
 
-## 3. Metric catalogue
+## 3. Metric catalogue  (tagged by framework axis)
 
-**Safety:** harmful-compliance rate, refusal rate, reasoning-about-safety,
-adding-intention, changing-subject (5-label judge); category-level harm.
-**Quality / coherence gate:** gibberish detector (`madhurjindal/autonlp-Gibberish-Detector`,
+**Potency** — harmful-compliance rate, refusal rate, reasoning-about-safety,
+adding-intention, changing-subject (5-label judge); category-level harm. *Headline
+rate:* `harmful_among_clean` (a.k.a. ASR-clean).
+**Quality** — coherence gate: gibberish detector (`madhurjindal/autonlp-Gibberish-Detector`,
 label `clean`), n-gram repeat / distinct-n, compression ratio, empty/truncation
 rate, benign NLL, MMLU/GSM8K accuracy delta, judge coherence/helpfulness 1–5.
-**Headline ratio:** `Δ harmful_compliance / Δ coherence_loss` — selective failure iff ≫ 1.
-**Headline rate:** `harmful_among_clean` (a.k.a. ASR-clean).
+**Safety-Reasoning** — CoT-monitorability gap (`asr_final − asr_cot_pred`), the
+sentence-level safety-reasoning trace judge (`has_safety_reasoning`, 6 categories,
+position/extent), and the 12-label pathway taxonomy (mechanism).
+**Cross-axis selectivity:** `Δ harmful_compliance / Δ coherence_loss` (selective
+failure iff ≫ 1) — a Potency-vs-Quality ratio; the composite that combines all three
+axes is an open design choice ([EVALUATION_FRAMEWORK.md §5](EVALUATION_FRAMEWORK.md)).
 
 ## 4. Controls & statistics (the evaluation suite)
 
@@ -68,7 +84,10 @@ Primary judge `Qwen2.5/Qwen3-30B-Instruct` (strong JSON adherence); robust parsi
 ≤3, persist raw output + model name. **Validate the judge against humans:** manually
 label ~100–200 (prompt, response) pairs across the 5 labels, report per-label F1 and
 Cohen's κ, flag labels where ≥2 judges disagree >20%. (This is now operationalised by
-the annotation tool — see [ANNOTATION_SETUP.md](ANNOTATION_SETUP.md).)
+the annotation tool — see [ANNOTATION_SETUP.md](ANNOTATION_SETUP.md).) The committed
+`batch_v5_002` validates all three judge instruments: `safety_5label` (Potency),
+`cot_only` (monitorability), and the **Tier-2 sentence-level `safety_reasoning`** task
+for the SR-trace judge (sentence-level + per-category κ).
 
 ## 6. Project lineage
 

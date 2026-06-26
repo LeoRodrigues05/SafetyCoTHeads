@@ -182,7 +182,57 @@ def _derive_safety_reasoning_metrics(flat: dict | None, row: dict) -> dict | Non
     return flat
 
 
-def judge_rows(judge: LoadedModel,
+def _normalize_for_kind(cfg: JudgeConfig, parsed, row: dict):
+    """Dispatch a parsed judge dict to its kind-specific flat normaliser."""
+    if not parsed:
+        return None
+    if cfg.kind == "safety":
+        return normalize_safety_labels(parsed)
+    if cfg.kind == "beavertails":
+        return normalize_beavertails_scores(parsed)
+    if cfg.kind == "pathway":
+        return normalize_pathway_labels(parsed)
+    if cfg.kind == "cot_only":
+        return normalize_cot_only(parsed)
+    if cfg.kind in ("pathway_single", "safety_single"):
+        return normalize_single_label(parsed)
+    if cfg.kind == "safety_reasoning_trace":
+        return _derive_safety_reasoning_metrics(
+            normalize_safety_reasoning_trace(parsed), row)
+    return None
+
+
+def _build_judged(row: dict, judge_name: str, cfg: JudgeConfig,
+                  attempts: list, parsed, flat) -> dict:
+    """Assemble the output record for one judged row (id + provenance + flat)."""
+    judged = {
+        "id": row["id"],
+        "dataset": row.get("dataset"),
+        "category": row.get("category"),
+        "condition": row.get("condition"),
+        "model": row.get("model"),
+        "judge_model": judge_name,
+        "judge_kind": cfg.kind,
+        "judge_label": cfg.label,
+        "judge_attempts": attempts,
+        "judge_parsed": parsed,
+        "judge_flat": flat,
+        "judge_parse_status": attempts[-1]["parse_status"],
+        "timestamp": now_iso(),
+    }
+    for k in (
+        "parent_id",
+        "n_trace_segments",
+        "n_cot_sentences",
+        "n_output_sentences",
+        "trace_segments",
+    ):
+        if k in row:
+            judged[k] = row[k]
+    return judged
+
+
+def judge_rows(judge,
                rows: Sequence[dict],
                cfg: Optional[JudgeConfig] = None,
                *,
@@ -194,20 +244,32 @@ def judge_rows(judge: LoadedModel,
     the *first* (greedy) attempt is batched across rows; retries fall back to
     per-row generation so retry temperature can be applied selectively.
 
+    ``judge`` may be a HF :class:`LoadedModel` or a vLLM judge wrapper (detected
+    via ``judge.is_vllm``); the vLLM path runs one continuous-batched pass over
+    all prompts, sidestepping the static-batch straggler entirely.
+
     When ``out_path`` is given, each judged row is appended to that JSONL file
     immediately after it is produced, so a SLURM kill loses at most one chunk.
     Resume is the caller's responsibility (filter ``rows`` against existing ids).
     """
     cfg = cfg or JudgeConfig()
-    bs = max(1, int(cfg.batch_size))
-    out: list[dict] = []
-
     prompts = [_build_prompt(cfg, r["prompt"], r["completion"]) for r in rows]
 
-    # Single chunked loop: greedy batch -> per-row parse+retries -> append now.
-    for i in tqdm(range(0, len(rows), bs), desc=f"judge[{cfg.kind}]"):
-        chunk_rows = rows[i:i + bs]
-        chunk_prompts = prompts[i:i + bs]
+    if getattr(judge, "is_vllm", False):
+        return _judge_rows_vllm(judge, list(rows), prompts, cfg, out_path)
+
+    bs = max(1, int(cfg.batch_size))
+    # Length-bucketing: process longest prompts first so each chunk groups
+    # similar-length rows. Under HF static batching a chunk's wall-time is paced
+    # by its single longest member, so without bucketing nearly every chunk runs
+    # to the global-max length; bucketing confines that cost to the few long
+    # chunks. Output is keyed by id and appended as produced; the returned list
+    # is restored to the caller's input order.
+    order = sorted(range(len(rows)), key=lambda i: len(prompts[i]), reverse=True)
+    results: dict[int, dict] = {}
+    for s in tqdm(range(0, len(order), bs), desc=f"judge[{cfg.kind}]"):
+        idxs = order[s:s + bs]
+        chunk_prompts = [prompts[i] for i in idxs]
         if bs == 1:
             chunk_raw = [_generate_once(judge, chunk_prompts[0], cfg.max_new_tokens,
                                          cfg.base_temperature, cfg.use_chat_template)]
@@ -215,8 +277,9 @@ def judge_rows(judge: LoadedModel,
             chunk_raw = _generate_batch(judge, chunk_prompts, cfg.max_new_tokens,
                                          cfg.base_temperature, cfg.use_chat_template)
 
-        for j, row in enumerate(chunk_rows):
-            raw = chunk_raw[j]
+        for k, i in enumerate(idxs):
+            row = rows[i]
+            raw = chunk_raw[k]
             res = parse_judge_json(raw)
             attempts = [{"temperature": cfg.base_temperature, "raw": raw,
                          "parse_status": res["parse_status"], "error": res["error"]}]
@@ -224,7 +287,7 @@ def judge_rows(judge: LoadedModel,
 
             retries_left = cfg.max_retries
             while parsed is None and retries_left > 0:
-                raw = _generate_once(judge, chunk_prompts[j], cfg.max_new_tokens,
+                raw = _generate_once(judge, prompts[i], cfg.max_new_tokens,
                                       cfg.retry_temperature, cfg.use_chat_template)
                 res = parse_judge_json(raw)
                 attempts.append({"temperature": cfg.retry_temperature, "raw": raw,
@@ -233,48 +296,58 @@ def judge_rows(judge: LoadedModel,
                     parsed = res["data"]
                 retries_left -= 1
 
-            if parsed and cfg.kind == "safety":
-                flat = normalize_safety_labels(parsed)
-            elif parsed and cfg.kind == "beavertails":
-                flat = normalize_beavertails_scores(parsed)
-            elif parsed and cfg.kind == "pathway":
-                flat = normalize_pathway_labels(parsed)
-            elif parsed and cfg.kind == "cot_only":
-                flat = normalize_cot_only(parsed)
-            elif parsed and cfg.kind in ("pathway_single", "safety_single"):
-                flat = normalize_single_label(parsed)
-            elif parsed and cfg.kind == "safety_reasoning_trace":
-                flat = normalize_safety_reasoning_trace(parsed)
-                flat = _derive_safety_reasoning_metrics(flat, row)
-            else:
-                flat = None
-            judged = {
-                "id": row["id"],
-                "dataset": row.get("dataset"),
-                "category": row.get("category"),
-                "condition": row.get("condition"),
-                "model": row.get("model"),
-                "judge_model": judge.name,
-                "judge_kind": cfg.kind,
-                "judge_label": cfg.label,
-                "judge_attempts": attempts,
-                "judge_parsed": parsed,
-                "judge_flat": flat,
-                "judge_parse_status": attempts[-1]["parse_status"],
-                "timestamp": now_iso(),
-            }
-            for k in (
-                "parent_id",
-                "n_trace_segments",
-                "n_cot_sentences",
-                "n_output_sentences",
-                "trace_segments",
-            ):
-                if k in row:
-                    judged[k] = row[k]
-            out.append(judged)
+            flat = _normalize_for_kind(cfg, parsed, row)
+            judged = _build_judged(row, judge.name, cfg, attempts, parsed, flat)
+            results[i] = judged
             if out_path is not None:
                 jsonl_append_one(out_path, judged)
+    return [results[i] for i in range(len(rows))]
+
+
+def _judge_rows_vllm(judge, rows: list[dict], prompts: list[str],
+                     cfg: JudgeConfig, out_path: Optional[str]) -> list[dict]:
+    """vLLM backend: one continuous-batched greedy pass over every prompt, then
+    batched retries for the rows that still fail to parse. vLLM's scheduler packs
+    sequences and evicts them as they finish, so there is no static-batch
+    straggler and no manual chunking/length-bucketing is needed."""
+    raws = judge.generate(prompts, cfg.max_new_tokens, cfg.base_temperature,
+                          cfg.use_chat_template)
+    attempts_by_i: dict[int, list] = {}
+    parsed_by_i: dict[int, object] = {}
+    pending: list[int] = []
+    for i, raw in enumerate(raws):
+        res = parse_judge_json(raw)
+        attempts_by_i[i] = [{"temperature": cfg.base_temperature, "raw": raw,
+                             "parse_status": res["parse_status"], "error": res["error"]}]
+        if res["parse_status"] in ("ok", "recovered"):
+            parsed_by_i[i] = res["data"]
+        else:
+            parsed_by_i[i] = None
+            pending.append(i)
+
+    retries_left = cfg.max_retries
+    while pending and retries_left > 0:
+        retry_raws = judge.generate([prompts[i] for i in pending], cfg.max_new_tokens,
+                                    cfg.retry_temperature, cfg.use_chat_template)
+        still: list[int] = []
+        for i, raw in zip(pending, retry_raws):
+            res = parse_judge_json(raw)
+            attempts_by_i[i].append({"temperature": cfg.retry_temperature, "raw": raw,
+                                     "parse_status": res["parse_status"], "error": res["error"]})
+            if res["parse_status"] in ("ok", "recovered"):
+                parsed_by_i[i] = res["data"]
+            else:
+                still.append(i)
+        pending = still
+        retries_left -= 1
+
+    out: list[dict] = []
+    for i, row in enumerate(rows):
+        flat = _normalize_for_kind(cfg, parsed_by_i[i], row)
+        judged = _build_judged(row, judge.name, cfg, attempts_by_i[i], parsed_by_i[i], flat)
+        out.append(judged)
+        if out_path is not None:
+            jsonl_append_one(out_path, judged)
     return out
 
 

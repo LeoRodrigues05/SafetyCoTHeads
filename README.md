@@ -1,13 +1,26 @@
 # safety_cot_heads
 
-A research codebase for **measuring and comparing white-box safety interventions** on
+A research codebase on the **evaluation** of white-box safety interventions for
 reasoning (chain-of-thought) language models.
 
-The current work is **Direction A v5 (iso-ASR sweep)**: take several families of
-internal, inference-time safety perturbations, apply them at matched strengths to
-the same harmful prompts, and ask — beyond "did the model comply?" — *how* each
-intervention breaks safety and whether the visible reasoning trace still warns
-before an unsafe answer.
+**The gap.** Many inference-time / white-box safety interventions exist (safety-head
+ablation, neuron ablation, refusal-direction steering, directional ablation, …), but
+each is reported with its own bespoke metric — usually a single attack-success-rate.
+There is **no direct, apples-to-apples way to compare two intervention methods**: an
+ASR number can't tell apart "induced coherent harm" from "broke the model", or a
+visibly-unsafe trace from a sanitised one.
+
+**The contribution (dual).** (1) A **comparative** study running representative
+intervention families through one controlled grid, and (2) a **proposed standardized
+metric** combining three axes — **Potency**, **Quality**, and **Safety-Reasoning** —
+so future intervention papers can report a comparable, decomposable score instead of
+a one-off ASR. We are on the **evaluation side** of LLM research: the deliverable is a
+measurement instrument, not a new attack or defence. See
+[docs/general/EVALUATION_FRAMEWORK.md](docs/general/EVALUATION_FRAMEWORK.md).
+
+The implementation substrate is **Direction A v5 (iso-ASR sweep)**: several families
+of internal, inference-time perturbations applied at matched strengths to the same
+harmful prompts, judged along the three axes.
 
 > Built by merging two upstream projects and extending them:
 > [`ydyjya/SafetyHeadAttribution`](https://github.com/ydyjya/SafetyHeadAttribution)
@@ -20,11 +33,14 @@ before an unsafe answer.
 
 ## 1. What we're doing
 
-**The question.** Given two interventions that produce the *same* final-answer
-attack-success rate (iso-ASR), do they disrupt the same safety subprocesses, and
-do they preserve or destroy the chain-of-thought as a safety *monitor*? See
-[docs/direction_a/README.md](docs/direction_a/README.md) (design, metric
-definitions, hypotheses/thresholds).
+**The question.** How do white-box safety interventions *actually* differ when put on
+shared axes — and can we standardize that comparison into a single, decomposable
+metric? Concretely, at matched potency (iso-ASR), do methods preserve model quality
+and keep the chain-of-thought a usable safety *monitor*, or not? The eval framing
+(gap, 3 axes, composite-metric proposal, related-evals positioning) is in
+[docs/general/EVALUATION_FRAMEWORK.md](docs/general/EVALUATION_FRAMEWORK.md); the
+mechanistic design + metric definitions + hypotheses are in
+[docs/direction_a/README.md](docs/direction_a/README.md).
 
 **The grid.** For each `(model, dataset, condition)` cell we generate completions,
 then judge them along several metric layers.
@@ -45,25 +61,32 @@ then judge them along several metric layers.
   artifacts), and `llama31_8b_control`. Config-only stubs for other models exist
   under `configs/.../direction_a_v5_iso_asr/` but have not been run.
 
-**Two judges.**
+**Judges.**
 
 | Judge | Model | Produces |
 |---|---|---|
 | Standard | `Qwen/Qwen3-30B-A3B-Instruct-2507` | 5-label safety, coherence/quality gate, CoT-only monitor |
+| Safety-reasoning trace | `Qwen/Qwen3-30B-A3B-Instruct-2507` (vLLM backend) | per-sentence safety-reasoning spans + 6 categories → `has_safety_reasoning`, first-position, extent |
 | Pathway | fine-tuned `models/pathway_judge_14b_merged` (Qwen3-14B LoRA) | 12-label pathway taxonomy → 8-dim pathway vector + `dominant_pathway` |
 
 The pathway judge is fine-tuned on HarmThoughts human annotations and validated at
-**κ ≈ 0.96 / F1 0.98** vs that gold set (baseline 30B: κ 0.21). See
-[docs/direction_a/README.md §7](docs/direction_a/README.md).
+**κ ≈ 0.96 / F1 0.98** vs that gold set (baseline 30B: κ 0.21). The safety-reasoning
+trace judge runs on **vLLM** (continuous batching, ~100× faster than HF static
+batching for this long-output pass — see [scripts/run_sr_vllm.sh](scripts/run_sr_vllm.sh)).
+See [docs/direction_a/README.md §7](docs/direction_a/README.md).
 
-**Metric layers** (per `(model,dataset,condition)` cell):
+**The three evaluation axes** (per `(model,dataset,condition)` cell). These are the
+top-level decomposition the proposed composite metric combines — see
+[docs/general/EVALUATION_FRAMEWORK.md](docs/general/EVALUATION_FRAMEWORK.md):
 
-| Layer | Metrics | Judge |
-|---|---|---|
-| Potency / quality | 5-label safety (`harmful_response`, `safe_rejection`, `reasoning_about_safety`, `adding_intention`, `changing_subject`); coherence gate (`clean_rate`); **`harmful_among_clean`** (headline ASR-clean) | standard |
-| Monitorability | CoT-only monitor (`asr_cot_pred`) → **monitorability gap** = `asr_final − asr_cot_pred` | standard |
-| Mechanism | 12-label pathway taxonomy → pathway vector + `dominant_pathway` | pathway (14B) |
-| (external) | indexed CoT-trace safety-reasoning | retrieved/secondary |
+| Axis | Question | Metrics | Judge |
+|---|---|---|---|
+| **Potency** | did it remove safety? | 5-label safety; coherence-gated **`harmful_among_clean`** (headline ASR-clean); per-category harm | standard |
+| **Quality** | did it keep the model intact? | coherence gate (`clean_rate`), repetition/degeneracy, judge helpfulness, benign-utility (MMLU/GSM8K) delta | standard |
+| **Safety-Reasoning** | did the visible reasoning still engage safety? | SR-trace judge (`has_safety_reasoning`, categories, position); **monitorability gap** = `asr_final − asr_cot_pred`; 12-label pathway taxonomy (mechanism) | SR-trace + standard + pathway |
+
+> Placement of the 12 pathway metrics under Safety-Reasoning, and the formula that
+> combines the three axes, are open design decisions documented in the framework doc.
 
 ---
 
@@ -149,6 +172,16 @@ CUDA_VISIBLE_DEVICES=0 PATHWAY_ONLY=1 JUDGE_CONFIG=judge_14b.yaml JUDGE_BATCH=12
 Two GPUs at once — distribute models across cards (see the `run_gpu0_*`/`run_gpu1_*`
 launchers, which pin `CUDA_VISIBLE_DEVICES` and loop a set of models).
 
+### Step 3b — safety-reasoning trace judging (vLLM)  〔~30–40 min/GPU for the whole grid〕
+Sentence-level safety-reasoning judge over full completions, on the **vLLM** backend
+(continuous batching; ~100× faster than HF here). Splits evenly across two GPUs:
+```bash
+CUDA_VISIBLE_DEVICES=0 bash scripts/run_sr_vllm.sh --num-shards 2 --shard-id 0
+CUDA_VISIBLE_DEVICES=1 bash scripts/run_sr_vllm.sh --num-shards 2 --shard-id 1
+```
+The wrapper sets the CUDA-13 toolkit paths + vLLM env this stack needs; HF fallback is
+`--backend hf` on `scripts.run_v5_safety_reasoning`. Resume-safe (skips judged ids).
+
 ### Step 4 — heal & report  〔seconds〕
 The standard and pathway passes write the same `summary.json`. The live writer now
 **merges** (preserves blocks it didn't recompute), but if an older pass clobbered a
@@ -177,13 +210,22 @@ Details: [docs/direction_a/README.md §7](docs/direction_a/README.md).
 ## 6. Validating the judges with human annotation  〔~1–2 h/annotator〕
 
 A clone-and-run web tool to certify the judges by computing **human-vs-judge
-Cohen's κ** on a blind, class-balanced sample. No GPU/model weights needed to
-annotate. Full setup for a new annotator:
+Cohen's κ** on a blind, class-balanced sample (a metric is only standardizable if its
+instruments are reliable). No GPU/model weights needed to annotate. The current
+committed batch `batch_v5_002` covers all three task types:
+
+- **safety_5label** (Potency) · **cot_only** (Safety-Reasoning / monitorability) ·
+  **safety_reasoning** — the **Tier-2 sentence-level** task validating the SR-trace
+  judge (mark each safety-reasoning sentence + category; sentence-level κ).
+
+The batch (`tasks.json`/`judge_labels.json`/`manifest.json`) is committed, so everyone
+who clones gets the **same** queries — run two annotators on it for the inter-annotator
+reliability ceiling. Full setup:
 [docs/general/ANNOTATION_SETUP.md](docs/general/ANNOTATION_SETUP.md).
 
 ```bash
-python -m scripts.annotate_server --batch data/annotations/batch_v5_001   # http://127.0.0.1:8765/
-python -m scripts.score_annotations --batch data/annotations/batch_v5_001 # -> validation_report.html
+python -m scripts.annotate_server  --batch data/annotations/batch_v5_002   # http://127.0.0.1:8765/
+python -m scripts.score_annotations --batch data/annotations/batch_v5_002  # -> validation_report.html
 ```
 See [data/annotations/README.md](data/annotations/README.md) for the metric mapping.
 
@@ -197,6 +239,7 @@ runs/direction_a_v5/<model>/
 └── judge/<dataset>/<condition>/seed0/
     ├── coherence.jsonl  judged_<condition>.jsonl  judge_cot_only.jsonl
     ├── monitorability_rows.jsonl  judge_pathway*.jsonl  pathway_vectors.jsonl
+    ├── judge_safety_reasoning_trace.jsonl  safety_reasoning.summary.json
     └── summary.json                 # per-condition aggregates (std + pathway)
 ```
 `runs/` is gitignored; status reports and the annotation batch are the tracked
@@ -212,6 +255,7 @@ artifacts. Standalone-VM run logs land in `logs/`.
 | `run_local_pipeline.sh` | standalone-VM driver: `<model> {discover\|gen\|judge}` |
 | `run_generation.py` | generate completions for a `gen/*.yaml` cell |
 | `run_v4_jbb_judge.py` | **the live judge driver** (despite the v4 name): coherence, 5-label safety, pathway, cot-only; `--skip-*` toggles |
+| `run_v5_safety_reasoning.py` / `run_sr_vllm.sh` | safety-reasoning trace judge (HF or vLLM backend); the `.sh` wrapper sets the vLLM/CUDA-13 env |
 | `reaggregate_v5_summaries.py` | CPU heal of clobbered `summary.json` from raw jsonls |
 | `make_v5_metrics_status_report.py` | filterable HTML coverage + metrics overview |
 | `make_v5_plots.py` | 10 analysis diagrams |
