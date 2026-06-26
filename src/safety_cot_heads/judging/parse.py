@@ -41,6 +41,60 @@ def _extract_first_object(text: str) -> Optional[str]:
     return m.group(0) if m else None
 
 
+def _close_truncated(text: str) -> Optional[str]:
+    """Repair JSON cut off by the generation token cap.
+
+    The safety-reasoning judge emits one object per flagged sentence; long
+    traces overflow ``max_new_tokens`` and the array is truncated mid-object,
+    which no amount of retrying fixes (greedy decoding truncates identically).
+    This drops the trailing incomplete element and appends the brackets needed
+    to balance, salvaging every complete object that was emitted before the cut.
+    Returns a parseable string, or ``None`` if nothing can be recovered.
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    s = text[start:]
+
+    def _scan(t: str):
+        """Walk ``t`` tracking string/bracket state (ignoring escaped chars).
+
+        Returns ``(unclosed_brackets, in_string, last_safe_cut)`` where the cut
+        is the index just past the most recently closed ``}``/``]`` — a point
+        at which the prefix ends on a complete element.
+        """
+        stack: list[str] = []
+        in_str = esc = False
+        cut: Optional[int] = None
+        for i, ch in enumerate(t):
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch in "{[":
+                stack.append("]" if ch == "[" else "}")
+            elif ch in "}]":
+                if stack:
+                    stack.pop()
+                cut = i + 1
+        return stack, in_str, cut
+
+    stack, in_str, cut = _scan(s)
+    if not stack and not in_str:
+        return s  # already balanced; nothing to repair
+    if cut is None:
+        return None
+    head = s[:cut].rstrip().rstrip(",")
+    stack2, _, _ = _scan(head)
+    return head + "".join(reversed(stack2))
+
+
 def _granite_clean(text: str) -> str:
     """Apply the ad-hoc cleanups that the legacy notebooks needed for Granite/Qwen."""
     s = text
@@ -91,6 +145,11 @@ def parse_judge_json(raw: str) -> dict:
         # legacy notebook trick: re-append closing brace when extraction
         # truncated one
         candidates.append(cleaned_body + "}")
+    # Last resort: rebalance JSON truncated by the token cap, salvaging every
+    # complete element emitted before the cut (see _close_truncated).
+    salvaged = _close_truncated(text)
+    if salvaged is not None:
+        candidates.append(salvaged)
 
     last_err = None
     for i, cand in enumerate(candidates):

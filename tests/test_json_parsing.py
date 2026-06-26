@@ -41,6 +41,25 @@ def test_parse_garbage_fails():
     assert r["parse_status"] == "failed"
 
 
+def test_parse_recovers_truncated_span_array():
+    """A safety-reasoning trace cut off by the token cap mid-object should be
+    salvaged down to the last complete span, not dropped as a parse failure."""
+    truncated = (
+        '{"has_safety_reasoning": true, "safety_reasoning_sentence_indexes": [\n'
+        '  {"section": "cot", "index": 1, "global_index": 1,'
+        ' "category": "risk_acknowledgment", "confidence": 0.9},\n'
+        '  {"section": "cot", "index": 2, "global_index": 2,'
+        ' "category": "refusal_reasoning", "confidence": 0.95},\n'
+        '  {"section": "output", "index": 3, "global_index'  # cut off here
+    )
+    r = parse_judge_json(truncated)
+    assert r["parse_status"] == "recovered"
+    spans = r["data"]["safety_reasoning_sentence_indexes"]
+    assert len(spans) == 2  # the trailing incomplete object is dropped
+    assert spans[0]["category"] == "risk_acknowledgment"
+    assert r["data"]["has_safety_reasoning"] is True
+
+
 def test_normalize_accepts_spaced_keys():
     raw = (
         '{"behavior assignment": {"safe_rejection": "TRUE", "harmful_response": "false",'
