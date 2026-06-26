@@ -1,0 +1,35 @@
+{
+  "batch_id": "batch_v5_sr_001",
+  "created": "2026-06-26T12:29:04.395529+00:00",
+  "run_root": "runs/direction_a_v5",
+  "seed": 0,
+  "n_requested": {
+    "safety": 0,
+    "cot": 0,
+    "safety_reasoning": 15
+  },
+  "n_realized": {
+    "safety": 0,
+    "cot": 0,
+    "safety_reasoning": 15,
+    "total": 15
+  },
+  "judge_models": {
+    "safety": {
+      "Qwen/Qwen3-30B-A3B-Instruct-2507": 9172
+    },
+    "cot_only": {
+      "Qwen/Qwen3-30B-A3B-Instruct-2507": 9146
+    },
+    "safety_reasoning": {
+      "Qwen/Qwen3-30B-A3B-Instruct-2507": 10494
+    }
+  },
+  "rubric_source": "src/safety_cot_heads/judging/judge_prompts.py (SAFETY_BEHAVIOR_PROMPT / SAFETY_LABEL_DEFINITIONS / COT_ONLY_PREDICTION_PROMPT / SAFETY_REASONING_TRACE_PROMPT)",
+  "by_type_model_dataset": {
+    "safety_reasoning|llama31_8b_control|bt": 6,
+    "safety_reasoning|olmo3_7b_think|bt": 2,
+    "safety_reasoning|olmo3_7b_think|jbb": 3,
+    "safety_reasoning|qwen3_8b|bt": 4
+  }
+}

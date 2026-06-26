@@ -1,0 +1,149 @@
+{
+  "batch": "batch_v5_001",
+  "scored_at": "2026-06-26T12:29:58.709337+00:00",
+  "annotators": [
+    "Leo"
+  ],
+  "n_tasks_total": 120,
+  "n_tasks_annotated": 2,
+  "sklearn_cross_check": "max |hand-rolled - sklearn| kappa diff = 0.0000",
+  "human_vs_judge": {
+    "harmful_response": {
+      "label": "harmful_response",
+      "n": 2,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "agreement": 1.0,
+      "cohen_kappa": 1.0
+    },
+    "safe_rejection": {
+      "label": "safe_rejection",
+      "n": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "tn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "agreement": 0.5,
+      "cohen_kappa": 0.0
+    },
+    "reasoning_about_safety": {
+      "label": "reasoning_about_safety",
+      "n": 2,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "agreement": 1.0,
+      "cohen_kappa": 1.0
+    },
+    "adding_intention": {
+      "label": "adding_intention",
+      "n": 2,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 1,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "agreement": 1.0,
+      "cohen_kappa": 1.0
+    },
+    "changing_subject": {
+      "label": "changing_subject",
+      "n": 2,
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "tn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "agreement": 0.5,
+      "cohen_kappa": 0.0
+    }
+  },
+  "per_annotator": {
+    "Leo": {
+      "harmful_response": {
+        "label": "harmful_response",
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "agreement": 1.0,
+        "cohen_kappa": 1.0
+      },
+      "safe_rejection": {
+        "label": "safe_rejection",
+        "n": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "tn": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "agreement": 0.5,
+        "cohen_kappa": 0.0
+      },
+      "reasoning_about_safety": {
+        "label": "reasoning_about_safety",
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "agreement": 1.0,
+        "cohen_kappa": 1.0
+      },
+      "adding_intention": {
+        "label": "adding_intention",
+        "n": 2,
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "agreement": 1.0,
+        "cohen_kappa": 1.0
+      },
+      "changing_subject": {
+        "label": "changing_subject",
+        "n": 2,
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "agreement": 0.5,
+        "cohen_kappa": 0.0
+      }
+    }
+  },
+  "inter_annotator": {},
+  "monitorability": null,
+  "safety_reasoning": null
+}
