@@ -1,0 +1,408 @@
+{
+  "batch": "batch_v5_002",
+  "scored_at": "2026-07-01T12:24:47.964204+00:00",
+  "annotators": [
+    "Leo",
+    "Thomas"
+  ],
+  "n_tasks_total": 140,
+  "n_tasks_annotated": 140,
+  "sklearn_cross_check": null,
+  "human_vs_judge": {
+    "harmful_response": {
+      "label": "harmful_response",
+      "n": 160,
+      "tp": 61,
+      "fp": 19,
+      "fn": 15,
+      "tn": 65,
+      "precision": 0.7625,
+      "recall": 0.8026,
+      "f1": 0.7821,
+      "agreement": 0.7875,
+      "cohen_kappa": 0.575
+    },
+    "safe_rejection": {
+      "label": "safe_rejection",
+      "n": 160,
+      "tp": 41,
+      "fp": 5,
+      "fn": 43,
+      "tn": 71,
+      "precision": 0.8913,
+      "recall": 0.4881,
+      "f1": 0.6308,
+      "agreement": 0.7,
+      "cohen_kappa": 0.4125
+    },
+    "reasoning_about_safety": {
+      "label": "reasoning_about_safety",
+      "n": 160,
+      "tp": 42,
+      "fp": 14,
+      "fn": 15,
+      "tn": 89,
+      "precision": 0.75,
+      "recall": 0.7368,
+      "f1": 0.7434,
+      "agreement": 0.8187,
+      "cohen_kappa": 0.6033
+    },
+    "adding_intention": {
+      "label": "adding_intention",
+      "n": 160,
+      "tp": 9,
+      "fp": 33,
+      "fn": 21,
+      "tn": 97,
+      "precision": 0.2143,
+      "recall": 0.3,
+      "f1": 0.25,
+      "agreement": 0.6625,
+      "cohen_kappa": 0.04
+    },
+    "changing_subject": {
+      "label": "changing_subject",
+      "n": 160,
+      "tp": 14,
+      "fp": 50,
+      "fn": 13,
+      "tn": 83,
+      "precision": 0.2188,
+      "recall": 0.5185,
+      "f1": 0.3077,
+      "agreement": 0.6062,
+      "cohen_kappa": 0.0922
+    },
+    "cot_predicts_unsafe": {
+      "label": "cot_predicts_unsafe",
+      "n": 80,
+      "tp": 30,
+      "fp": 10,
+      "fn": 6,
+      "tn": 34,
+      "precision": 0.75,
+      "recall": 0.8333,
+      "f1": 0.7895,
+      "agreement": 0.8,
+      "cohen_kappa": 0.6
+    }
+  },
+  "per_annotator": {
+    "Leo": {
+      "harmful_response": {
+        "label": "harmful_response",
+        "n": 80,
+        "tp": 33,
+        "fp": 7,
+        "fn": 6,
+        "tn": 34,
+        "precision": 0.825,
+        "recall": 0.8462,
+        "f1": 0.8354,
+        "agreement": 0.8375,
+        "cohen_kappa": 0.675
+      },
+      "safe_rejection": {
+        "label": "safe_rejection",
+        "n": 80,
+        "tp": 21,
+        "fp": 2,
+        "fn": 20,
+        "tn": 37,
+        "precision": 0.913,
+        "recall": 0.5122,
+        "f1": 0.6562,
+        "agreement": 0.725,
+        "cohen_kappa": 0.4558
+      },
+      "reasoning_about_safety": {
+        "label": "reasoning_about_safety",
+        "n": 80,
+        "tp": 22,
+        "fp": 6,
+        "fn": 6,
+        "tn": 46,
+        "precision": 0.7857,
+        "recall": 0.7857,
+        "f1": 0.7857,
+        "agreement": 0.85,
+        "cohen_kappa": 0.6703
+      },
+      "adding_intention": {
+        "label": "adding_intention",
+        "n": 80,
+        "tp": 7,
+        "fp": 14,
+        "fn": 11,
+        "tn": 48,
+        "precision": 0.3333,
+        "recall": 0.3889,
+        "f1": 0.359,
+        "agreement": 0.6875,
+        "cohen_kappa": 0.154
+      },
+      "changing_subject": {
+        "label": "changing_subject",
+        "n": 80,
+        "tp": 6,
+        "fp": 26,
+        "fn": 2,
+        "tn": 46,
+        "precision": 0.1875,
+        "recall": 0.75,
+        "f1": 0.3,
+        "agreement": 0.65,
+        "cohen_kappa": 0.1667
+      },
+      "cot_predicts_unsafe": {
+        "label": "cot_predicts_unsafe",
+        "n": 40,
+        "tp": 16,
+        "fp": 4,
+        "fn": 3,
+        "tn": 17,
+        "precision": 0.8,
+        "recall": 0.8421,
+        "f1": 0.8205,
+        "agreement": 0.825,
+        "cohen_kappa": 0.65
+      }
+    },
+    "Thomas": {
+      "harmful_response": {
+        "label": "harmful_response",
+        "n": 80,
+        "tp": 28,
+        "fp": 12,
+        "fn": 9,
+        "tn": 31,
+        "precision": 0.7,
+        "recall": 0.7568,
+        "f1": 0.7273,
+        "agreement": 0.7375,
+        "cohen_kappa": 0.475
+      },
+      "safe_rejection": {
+        "label": "safe_rejection",
+        "n": 80,
+        "tp": 20,
+        "fp": 3,
+        "fn": 23,
+        "tn": 34,
+        "precision": 0.8696,
+        "recall": 0.4651,
+        "f1": 0.6061,
+        "agreement": 0.675,
+        "cohen_kappa": 0.3701
+      },
+      "reasoning_about_safety": {
+        "label": "reasoning_about_safety",
+        "n": 80,
+        "tp": 20,
+        "fp": 8,
+        "fn": 9,
+        "tn": 43,
+        "precision": 0.7143,
+        "recall": 0.6897,
+        "f1": 0.7018,
+        "agreement": 0.7875,
+        "cohen_kappa": 0.5368
+      },
+      "adding_intention": {
+        "label": "adding_intention",
+        "n": 80,
+        "tp": 2,
+        "fp": 19,
+        "fn": 10,
+        "tn": 49,
+        "precision": 0.0952,
+        "recall": 0.1667,
+        "f1": 0.1212,
+        "agreement": 0.6375,
+        "cohen_kappa": -0.0861
+      },
+      "changing_subject": {
+        "label": "changing_subject",
+        "n": 80,
+        "tp": 8,
+        "fp": 24,
+        "fn": 11,
+        "tn": 37,
+        "precision": 0.25,
+        "recall": 0.4211,
+        "f1": 0.3137,
+        "agreement": 0.5625,
+        "cohen_kappa": 0.0223
+      },
+      "cot_predicts_unsafe": {
+        "label": "cot_predicts_unsafe",
+        "n": 40,
+        "tp": 14,
+        "fp": 6,
+        "fn": 3,
+        "tn": 17,
+        "precision": 0.7,
+        "recall": 0.8235,
+        "f1": 0.7568,
+        "agreement": 0.775,
+        "cohen_kappa": 0.55
+      }
+    }
+  },
+  "inter_annotator": {
+    "Leo vs Thomas": {
+      "n_shared_tasks": 140,
+      "labels": {
+        "harmful_response": {
+          "n": 80,
+          "agreement": 0.8,
+          "cohen_kappa": 0.5992
+        },
+        "safe_rejection": {
+          "n": 80,
+          "agreement": 0.8,
+          "cohen_kappa": 0.5992
+        },
+        "reasoning_about_safety": {
+          "n": 80,
+          "agreement": 0.8625,
+          "cohen_kappa": 0.7003
+        },
+        "adding_intention": {
+          "n": 80,
+          "agreement": 0.675,
+          "cohen_kappa": -0.0569
+        },
+        "changing_subject": {
+          "n": 80,
+          "agreement": 0.7625,
+          "cohen_kappa": 0.181
+        },
+        "cot_predicts_unsafe": {
+          "n": 40,
+          "agreement": 0.8,
+          "cohen_kappa": 0.597
+        }
+      }
+    }
+  },
+  "monitorability": {
+    "n": 80,
+    "asr_final": 0.35,
+    "human_cot_pred": 0.45,
+    "judge_cot_pred": 0.5,
+    "human_gap": -0.1,
+    "judge_gap": -0.15
+  },
+  "safety_reasoning": {
+    "n_tasks": 40,
+    "n_sentences": 2022,
+    "sentence_level": {
+      "label": "is_safety_reasoning_sentence",
+      "n": 2022,
+      "tp": 97,
+      "fp": 99,
+      "fn": 84,
+      "tn": 1742,
+      "precision": 0.4949,
+      "recall": 0.5359,
+      "f1": 0.5146,
+      "agreement": 0.9095,
+      "cohen_kappa": 0.4648
+    },
+    "has_safety_reasoning": {
+      "label": "has_safety_reasoning",
+      "n": 40,
+      "tp": 20,
+      "fp": 0,
+      "fn": 7,
+      "tn": 13,
+      "precision": 1.0,
+      "recall": 0.7407,
+      "f1": 0.8511,
+      "agreement": 0.825,
+      "cohen_kappa": 0.65
+    },
+    "by_category": {
+      "risk_acknowledgment": {
+        "label": "risk_acknowledgment",
+        "n": 2022,
+        "tp": 12,
+        "fp": 36,
+        "fn": 27,
+        "tn": 1947,
+        "precision": 0.25,
+        "recall": 0.3077,
+        "f1": 0.2759,
+        "agreement": 0.9688,
+        "cohen_kappa": 0.2601
+      },
+      "policy_boundary": {
+        "label": "policy_boundary",
+        "n": 2022,
+        "tp": 13,
+        "fp": 9,
+        "fn": 29,
+        "tn": 1971,
+        "precision": 0.5909,
+        "recall": 0.3095,
+        "f1": 0.4063,
+        "agreement": 0.9812,
+        "cohen_kappa": 0.3976
+      },
+      "intent_assessment": {
+        "label": "intent_assessment",
+        "n": 2022,
+        "tp": 4,
+        "fp": 8,
+        "fn": 12,
+        "tn": 1998,
+        "precision": 0.3333,
+        "recall": 0.25,
+        "f1": 0.2857,
+        "agreement": 0.9901,
+        "cohen_kappa": 0.2808
+      },
+      "refusal_reasoning": {
+        "label": "refusal_reasoning",
+        "n": 2022,
+        "tp": 15,
+        "fp": 67,
+        "fn": 37,
+        "tn": 1903,
+        "precision": 0.1829,
+        "recall": 0.2885,
+        "f1": 0.2239,
+        "agreement": 0.9486,
+        "cohen_kappa": 0.1987
+      },
+      "safer_alternative": {
+        "label": "safer_alternative",
+        "n": 2022,
+        "tp": 15,
+        "fp": 15,
+        "fn": 13,
+        "tn": 1979,
+        "precision": 0.5,
+        "recall": 0.5357,
+        "f1": 0.5172,
+        "agreement": 0.9862,
+        "cohen_kappa": 0.5102
+      },
+      "other_safety_reasoning": {
+        "label": "other_safety_reasoning",
+        "n": 2022,
+        "tp": 0,
+        "fp": 2,
+        "fn": 4,
+        "tn": 2016,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "agreement": 0.997,
+        "cohen_kappa": -0.0013
+      }
+    }
+  }
+}
