@@ -1,0 +1,78 @@
+% =========================================================================
+% 4. FINDINGS   [~2.75 pages --- the core of the paper]
+% GOAL: prove the metric earns its keep. Each subsection = one claim + the float that
+%       shows it. Structure: 4.1 a single ASR is not enough (F1+F2); 4.2 decomposition
+%       separates methods (F3+F4); 4.3 monitorability holds (F5); 4.4 metric ablation.
+% HOSTS: Figure 3 (baseline-correction), Table 3 (Kendall tau + ablation),
+%        Figure 4 (steering dose-response), Table 4 (family means), Figure 5 (gap/S).
+% CAVEAT to state once: llama steering cells pending regeneration (F4 completeness).
+% =========================================================================
+\section{Findings}
+\label{sec:findings}
+
+% ---- ¶0 (How to read this section, 2 lines): all axes baseline-corrected;
+%      "raw ASR" = the un-normalised coherence-gated HAC current papers report;
+%      SFS reorders it once P is corrected and gated by Q and S.
+
+\subsection{A single ASR is not enough}
+\label{sec:f1f2}
+% ---- ¶1 (F1 --- a lone ASR mis-ranks methods): within each model, raw coherence-gated
+%      ASR ranks conditions differently from SFS. Kendall tau(raw ASR, SFS) = 0.73
+%      (Llama), 0.78 (OLMo-base), up to 0.96 (safest). Most reordering recovered by the
+%      Potency correction alone. -> Table 3 (also hosts the ablation, §4.4).
+
+% ---- ¶2 (F2 --- baseline-correction essential on non-safe models): OLMo-3-base raw HAC
+%      = 0.63--0.74 for ALL TEN interventions (raw leaderboard = ten ~70% jailbreaks);
+%      baseline-corrected P reveals only a few add real harm (neurons_top512 P~0.00 at
+%      raw HAC~0.63). Single clearest demonstration a lone ASR is inadequate whenever
+%      the baseline is not ~0.
+%      >>> FIGURE 3 anchored here: OLMo-base raw HAC (flat ~0.7) vs P (mostly ~0) bars.
+%          \TODO derive from composite_cells.csv.
+
+\subsection{Decomposition separates method families}
+\label{sec:f3f4}
+% ---- ¶3 (F3 --- coherence-gating separates "removed safety" from "broke the model"):
+%      head ablation craters coherence on Llama (ships_top5 Q~0.44, ships_top8 Q~0.46);
+%      heavy neuron ablation on OLMo-base-own (neurons_top1024 clean 0.51, Q~0.66). A
+%      non-gated ASR scores these as jailbreaks; Q exposes generic degradation. Note the
+%      ablation (§4.4) shows the gate bites *specifically* on these cells.
+
+% ---- ¶4 (F4 --- families separate once decomposed): pooled family means ->
+%      Steering SFS 0.50 (P 0.20) > Directional ablation 0.42 (P 0.09) > SHIPS-heads
+%      0.37 (P 0.08) > Neuron 0.26 (P 0.06). Raw ASR rates steering ~ ablation
+%      (0.49 vs 0.42); decomposition separates them. -> Table 4.
+
+% ---- ¶5 (F4 cont. --- steering dose-responds cleanly): on olmo3_7b_think P climbs
+%      0.05 -> 0.33 -> 0.77 and SFS 0.38 -> 0.67 -> 0.88 across a in {0.5,1.0,1.5};
+%      Q and S stay high. Contrast head/neuron ablation, weak at matched strength.
+%      >>> FIGURE 4 anchored here (wide): figures/composite_01_steering_dose_response.png
+%          (P/Q/S/SFS panels, 4 models). \TODO caption.
+
+% ---- ¶6 (Data-status caveat, one sentence): llama31_8b_control steering cells pending
+%      regeneration (stale-dose bug); family table complete for 4/5 models, Llama
+%      contributes heads+neurons only until then. \TODO remove once regenerated.
+
+\subsection{The CoT monitor does not covertly fail}
+\label{sec:f5}
+% ---- ¶7 (F5 --- the honest null, reframes H3): pre-registered H3 predicted sanitised
+%      traces (gap >> 0). The grid shows the opposite: covert harm (gap>0) essentially
+%      absent (max ~0.04 Llama, ~0 elsewhere); S ~ 0.85--1.0. Head ablation runs the
+%      OTHER way (gap << 0): degrades the answer to incoherence while the trace still
+%      reasons --- over-cautious monitor, not sanitised.
+%      >>> FIGURE 5 anchored here: gap / S by family, covert rate ~0. \TODO derive.
+
+% ---- ¶8 (Why we keep S anyway): it is the only axis that would catch a *future* covert
+%      method, and head-ablation's over-flagging is itself reportable. sfs_covert
+%      reaches the same conclusions -> robustness, not redundancy. Frame as a template
+%      for reporting a null axis without dropping it.
+
+\subsection{Metric ablation: which correction does the work?}
+\label{sec:ablation}
+% ---- ¶9 (The ablation): strip each correction, measure Kendall tau of the reduced
+%      scalar's ranking vs full SFS (per model). Three results: (i) baseline-correcting
+%      Potency (raw->P) does the most work; (ii) the coherence gate (P->PQ) bites
+%      specifically where interventions destroy the model (Llama heads, OLMo-base-own
+%      neurons); (iii) S is preserved on this grid but retained for future covert
+%      methods (consistent with F5). -> Table 3 (shared with §4.1).
+
+\TODO{Findings is outline-only. Write ¶0--¶9; place Figs 3--5 and Tabs 3--4 as marked.}

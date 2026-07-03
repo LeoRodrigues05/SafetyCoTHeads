@@ -47,6 +47,12 @@ models:
     model_ref: qwen3_4b_thinking
     max_new_tokens: 1024
     batch_size: 4
+  # R1 reasoning lineage (distinct from Qwen3/OLMo-3/Llama-3.1). Full own-model
+  # discovery (no reuse_discovery_*): fresh checkpoint with its own circuitry.
+  r1_distill_qwen_7b:
+    model_ref: r1_distill_qwen_7b
+    max_new_tokens: 1024      # room for <think> + final answer
+    batch_size: 8
   r1_distill_8b:
     model_ref: deepseek_r1_distill_llama_8b
     max_new_tokens: 1024

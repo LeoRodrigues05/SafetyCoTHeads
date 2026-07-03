@@ -1,0 +1,27 @@
+% =========================================================================
+% LIMITATIONS   [~0.4 page] --- ACL-required, UNNUMBERED (\section*), not page-counted.
+% GOAL: pre-empt the obvious reviewer objections honestly; each -> a future-work hook.
+% =========================================================================
+\section*{Limitations}
+\label{sec:limitations}
+
+% ---- ¶1 (Scale/scope): 7--8B only; no scaling study, no multimodal/MoE, no
+%      fine-tuning-based intervention. The instrument is scale-free by construction but
+%      unverified above 8B.
+
+% ---- ¶2 (Quality axis is coherence-only): benign-utility retention
+%      (MMLU/GSM8K/AlpacaEval delta) not yet folded into Q. State the risk (a method
+%      that preserves coherence but destroys capability would score high on Q).
+
+% ---- ¶3 (Statistics partial): pre-registered H1--H5 only partly run --- paired McNemar
+%      + Wilson intervals exist; paired-bootstrap + BH-FDR not yet applied; H3 must be
+%      rewritten to the observed gap<=0 sign (§4.3).
+
+% ---- ¶4 (Data completeness): llama31_8b_control steering cells pending regeneration,
+%      so the cross-model family table is complete for 4/5 models.
+
+% ---- ¶5 (Result scope): the Safety-Reasoning null is specific to SUPPRESSIVE
+%      interventions at these strengths; whether a covert method the axis would catch
+%      exists is open by construction (that's why S stays in the metric).
+
+\TODO{Limitations is outline-only. Write ¶1--¶5; tighten once pending items land.}

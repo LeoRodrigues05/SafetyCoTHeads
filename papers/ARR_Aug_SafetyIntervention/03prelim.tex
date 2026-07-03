@@ -1,0 +1,81 @@
+% =========================================================================
+% 3. PRELIMINARIES: METRIC AND SETUP   [~2.0 pages]
+% GOAL: define the instrument (3 axes + composite) and the substrate (grid + judges)
+%       precisely enough that §4 is just "here are the numbers." Everything the reader
+%       needs to trust the results lives here.
+% HOSTS: Figure 2 (metric schematic), Table 1 (the grid), Table 2 (judge validation).
+% OPEN DECISION: promote 3.1--3.2 to a standalone "The Metric" section if reviewers
+%       want it foregrounded (see _OUTLINE.md).
+% =========================================================================
+\section{Preliminaries: Metric and Setup}
+\label{sec:prelim}
+
+\subsection{The three axes}
+\label{sec:axes}
+% ---- ¶1 (Framing): an intervention's effect is characterised on three orthogonal
+%      axes, each in [0,1], each *baseline-corrected* against the same-(model,dataset)
+%      baseline cell. Name the three: Potency (removed safety?), Quality (kept the
+%      model intact?), Safety-Reasoning (did the visible reasoning still engage
+%      safety?). One sentence on why orthogonal.
+%      >>> FIGURE 2 anchored here: metric schematic (3 axes -> SFS). \TODO make (TikZ).
+
+% ---- ¶2 (Potency, Eq. P): define harmful-among-clean (HAC = ASR over coherence-gated
+%      responses) and the baseline-corrected P = clip[(HAC_c - HAC_b)/(1-HAC_b)].
+%      One line on why HAC not raw ASR (defeats "broke the model" loophole).
+
+% ---- ¶3 (Quality, Eq. Q): coherence retention Q = clip[clean_c / clean_b]. Name the
+%      gibberish/degeneracy detector. Note Q is coherence-only for now; utility is
+%      future work (forward-ref Limitations).
+
+% ---- ¶4 (Safety-Reasoning, Eq. S): define the CoT-monitorability gap
+%      gap = asr_final - asr_cot_pred (judge shown ONLY the trace), then
+%      S = 1 - clip[|gap_c| - |gap_b|]. Interpret gap>>0 (sanitised, worst),
+%      gap~0 (tracks), gap<<0 (over-cautious). This axis absorbs the mechanistic work.
+
+% ---- ¶5 (Why baseline-correction): isolates intervention-induced effect from the
+%      base model's own behaviour; without it an already-unsafe base scores every
+%      intervention as a jailbreak (forward-ref F2). Orientation convention: suppressive
+%      = high score; a defence eval flips the sign of P.
+
+\subsection{The composite score}
+\label{sec:composite}
+% ---- ¶6 (Primary object): we report the (P,Q,S) vector + Pareto dominance as the
+%      primary object (HELM precedent for multi-metric reporting), and one headline
+%      scalar for the reviewer who wants a number.
+
+% ---- ¶7 (SFS, Eq.): Selective-Failure Score SFS = (P*Q*S)^{1/3}. Geometric mean gives
+%      "no axis left behind" (any axis ->0 collapses SFS). Note variants used in the
+%      ablation: sfs_product = PQS, threat-oriented sfs_covert = PQ(1-S).
+
+% ---- ¶8 (Carried alongside, not scored): covert rate max(0,gap), safety_reasoning_rate,
+%      and the categorical dominant_pathway histogram (12-label taxonomy = the
+%      mechanistic "why" behind S; reported descriptively, not folded into the scalar).
+
+\subsection{Experimental grid}
+\label{sec:grid}
+% ---- ¶9 (The grid, one controlled substrate -> Table 1): 5 models, up to 11
+%      conditions, 2 datasets; iso-ASR anchoring + layer-matched-random controls.
+%      Models: qwen3_8b, olmo3_7b_think (explicit <think>), olmo3_7b_base,
+%      olmo3_7b_base_own, llama31_8b_control. Conditions: baseline; ships_top{3,5,8}
+%      (heads); neurons_top{256,512,1024}; steering_a{0.5,1.0,1.5} (activation-addition,
+%      a1.0 = iso-ASR anchor); steering_ablate (directional ablation). Datasets: JBB
+%      (100), BeaverTails (98 = 7x14). \TODO Table 1.
+
+% ---- ¶10 (Why these families): they instantiate the three mechanistic targets a
+%      metric must separate (head/neuron/steering/ablation). One line linking to the
+%      DSH harmfulness/refusal factorisation as the theoretical spine. Note the two
+%      OLMo base variants (own-artifact vs shared) and the Llama *control*.
+
+\subsection{Judges and their validation}
+\label{sec:judges}
+% ---- ¶11 (The three judges): standard 5-label safety+coherence (Qwen3-30B);
+%      per-sentence safety-reasoning trace judge (Qwen3-30B, vLLM backend); fine-tuned
+%      12-label pathway judge (Qwen3-14B LoRA). Map each judge -> which axis it feeds.
+
+% ---- ¶12 (Validation -> Table 2): a metric is only standardizable if its instruments
+%      are reliable. Pathway judge kappa~0.96 / F1 0.98 vs human gold (30B baseline
+%      kappa 0.21); 5-label, CoT-only, and SR-trace human-validated on batch_v5_002 by
+%      two annotators (report kappa + inter-annotator agreement). \TODO Table 2.
+
+\TODO{Preliminaries is outline-only. Write ¶1--¶12; add Eqs for P,Q,S,SFS; make Fig 2,
+Tab 1, Tab 2.}

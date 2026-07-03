@@ -1,0 +1,57 @@
+% =========================================================================
+% 1. INTRODUCTION   [~1.25 pages, incl. Fig 1 teaser]
+% GOAL: land the gap, prove one ASR is inadequate, state the dual contribution,
+%       teaser the 5 findings. By end of p.1 the reader knows exactly what's new.
+% HOSTS: Figure 1 (teaser: raw ASR vs SFS).
+% =========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+% ---- ¶1 (The landscape): a wave of inference-time / white-box interventions now
+%      exists (safety-head ablation, neuron ablation, refusal-direction steering,
+%      directional ablation, learned masks). Each is reported on its own setup with
+%      its own metric --- almost always a single ASR or refusal-rate. Cite the
+%      family papers. Topic sentence sets up "many methods, no common yardstick."
+
+% ---- ¶2 (The gap, sharpened): there is no apples-to-apples way to compare two
+%      methods. State it as the paper's target. One line: an ASR is a scalar summary
+%      that presupposes the comparison it should enable.
+
+% ---- ¶3 (Why one ASR is inadequate --- the 3 collapses): (a) coherent harm vs a
+%      broken model (regex counts gibberish as non-refusal); (b) visibly-unsafe vs
+%      sanitised CoT (monitorability); (c) potency/fluency trade-off. This ¶ motivates
+%      exactly the three axes we later define --- foreshadow P, Q, S here.
+%      >>> FIGURE 1 anchored here (teaser): figures/composite_03_raw_asr_vs_sfs.png ---
+%          same raw ASR, wildly different decomposed score. \TODO caption.
+
+% ---- ¶4 (Our stance): we are on the *evaluation* side; the deliverable is a
+%      measurement instrument, not a new attack or defence. Distinguish from the
+%      intervention papers themselves.
+
+% ---- ¶5 (Contribution, dual --- itemised): (1) comparative study on one controlled
+%      grid; (2) a proposed standardized, decomposable metric (P,Q,S -> SFS) that
+%      future papers can adopt, playing the StrongREJECT/HarmBench role for
+%      interventions rather than jailbreaks. State both are needed (comparison
+%      validates the metric; metric operationalises the comparison).
+
+% ---- ¶6 (Findings teaser): F1 a single ASR mis-ranks methods; F2 baseline-correction
+%      essential; F3 coherence-gating separates removal from breakage; F4 families
+%      separate once decomposed; F5 no covert CoT failure (reframes pre-registered H3)
+%      --- and note the metric surfaces this null honestly.
+
+% ---- ¶7 (Roadmap + release, optional 2 lines): section pointers; we release metric,
+%      grid, and human-validated judges.
+
+\TODO{Intro is outline-only (see paragraph plan above). Write ¶1--¶7 as prose;
+place Fig 1 at ¶3.}
+
+% >>> Figure 1 (teaser). Uncomment and fill when drafting.
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\columnwidth]{figures/composite_03_raw_asr_vs_sfs.png}
+%   \caption{\textbf{One number isn't enough.} Each point is a
+%     \texttt{(model,dataset,condition)} cell: raw coherence-gated ASR (x) vs the
+%     decomposed Selective-Failure Score (y). \TODO{describe the vertical bands ---
+%     cells with near-identical ASR span the full range of SFS.}}
+%   \label{fig:teaser}
+% \end{figure}

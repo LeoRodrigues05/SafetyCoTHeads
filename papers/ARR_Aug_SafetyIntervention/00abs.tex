@@ -1,0 +1,24 @@
+% =========================================================================
+% ABSTRACT   [~180 words]
+% Plan (one sentence each): (1) gap; (2) why one ASR is inadequate;
+% (3) dual contribution; (4) setup in one breath; (5) headline findings incl.
+% the honest null; (6) release.
+% =========================================================================
+\begin{abstract}
+% First-draft prose below (trim to ~180 words). \TODO finalise numbers post-regeneration.
+A growing set of inference-time, white-box safety interventions---safety-head ablation,
+safety-neuron ablation, refusal-direction steering, directional ablation---are each
+reported with a bespoke, single-axis attack-success-rate (ASR), so there is no direct,
+apples-to-apples way to compare two methods. A single ASR cannot tell \emph{induced
+coherent harm} apart from a \emph{broken model}, nor a visibly-unsafe chain-of-thought
+from a sanitised one. We make a dual contribution: (i) the first head-to-head comparison
+of representative intervention families through one controlled grid (5 models $\times$ 2
+datasets $\times$ up to 11 conditions, iso-ASR anchoring, human-validated judges), and
+(ii) a proposed standardized, decomposable metric over three axes---\textbf{Potency},
+\textbf{Quality}, and \textbf{Safety-Reasoning}---combined into a single Selective-Failure
+Score. We show that a lone ASR demonstrably mis-ranks interventions (Kendall $\tau$ as low
+as $0.73$ against the decomposed score), that baseline-correction is essential on models
+whose base behaviour is not already safe, and that for current \emph{suppressive}
+interventions the visible reasoning does \emph{not} covertly fail---an honest result our
+metric is built to report rather than hide.
+\end{abstract}

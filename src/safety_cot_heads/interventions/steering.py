@@ -69,10 +69,21 @@ def build_steering_cfg_from_file(lm: LoadedModel,
                                  *,
                                  direction_path: str | Path,
                                  layer: int,
-                                 mode: str = "ablate",
+                                 mode: Optional[str] = None,
                                  alpha: float = 1.0,
                                  layers: Optional[Sequence[int]] = None) -> dict:
-    """Convenience: load a direction from disk and dispatch on ``mode``."""
+    """Convenience: load a direction from disk and dispatch on ``mode``.
+
+    ``mode`` must be given explicitly (``"add"`` or ``"ablate"``). A silent
+    default is dangerous: ``"ablate"`` ignores ``alpha`` entirely, so an
+    activation-addition dose sweep whose config omits ``mode`` would collapse
+    to identical directional-ablation runs across all doses.
+    """
+    if mode is None:
+        raise ValueError(
+            "steering 'mode' must be set explicitly to 'add' or 'ablate'; "
+            "refusing to default (ablate silently discards the alpha dose)"
+        )
     v = _load_direction(direction_path, layer)
     if mode == "ablate":
         n_layers, _, _ = num_layers_and_heads(lm.model)

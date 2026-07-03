@@ -2,6 +2,10 @@ from .coherence import (
     CoherenceConfig, classify_gibberish, coherence_diagnostics,
     compression_ratio, ngram_repeat_fraction,
 )
+from .composite import (
+    AxisScores, CellSignals, axis_scores, cell_signals_from_summary,
+    kendall_tau, pareto_front, rank_by, sfs, sfs_covert, sfs_product,
+)
 from .dose_response import dose_curve
 from .metrics import asr, harmful_rate, quality_score, refusal_rate, wilson_ci
 from .overlap import head_set, jaccard, overlap_report, safety_excluding
@@ -19,6 +23,8 @@ from .trajectory import first_flip_to_harmful, split_sentences, trajectory_for_r
 
 __all__ = [
     "asr", "harmful_rate", "refusal_rate", "wilson_ci", "quality_score",
+    "AxisScores", "CellSignals", "axis_scores", "cell_signals_from_summary",
+    "kendall_tau", "pareto_front", "rank_by", "sfs", "sfs_covert", "sfs_product",
     "head_set", "jaccard", "overlap_report", "safety_excluding",
     "dose_curve",
     "split_sentences", "trajectory_for_row", "first_flip_to_harmful",
