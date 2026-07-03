@@ -1,0 +1,10 @@
+{
+  "n_harmful": 100,
+  "n_benign": 100,
+  "model": "Qwen/Qwen3-8B",
+  "default_layer": 18,
+  "citation": "Arditi et al. 2024, 'Refusal in LLMs is Mediated by a Single Direction'. Direction at each layer = mean(harmful_residual) - mean(benign_residual) captured at the last prompt token.",
+  "npz_path": "runs/direction_a_v5/qwen3_8b/17-direction-extraction/refusal_directions.npz",
+  "n_layers": 36,
+  "hidden_size": 4096
+}

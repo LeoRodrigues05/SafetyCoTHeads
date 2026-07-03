@@ -1,0 +1,10 @@
+{
+  "n_harmful": 100,
+  "n_benign": 100,
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "default_layer": 16,
+  "citation": "Arditi et al. 2024, 'Refusal in LLMs is Mediated by a Single Direction'. Direction at each layer = mean(harmful_residual) - mean(benign_residual) captured at the last prompt token.",
+  "npz_path": "runs/direction_a/17-direction-extraction-llama31/refusal_directions.npz",
+  "n_layers": 32,
+  "hidden_size": 4096
+}

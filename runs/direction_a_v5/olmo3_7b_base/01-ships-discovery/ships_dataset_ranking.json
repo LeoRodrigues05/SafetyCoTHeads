@@ -1,0 +1,135 @@
+{
+  "model": "allenai/Olmo-3-1025-7B",
+  "method": "ships",
+  "dataset": "maliciousinstruct",
+  "n_prompts": 100,
+  "config": {
+    "tracker": {
+      "experiment": "direction_a_v5",
+      "run": "ships_discovery_olmo3_7b_base",
+      "status": "runnable"
+    },
+    "seed": 0,
+    "method": "ships",
+    "model": {
+      "name": "allenai/Olmo-3-1025-7B",
+      "dtype": "bfloat16",
+      "attn_implementation": "eager"
+    },
+    "dataset": {
+      "name": "maliciousinstruct",
+      "n": 100
+    },
+    "method_args": {
+      "mask_qkv": [
+        "q"
+      ],
+      "mask_type": "scale_mask",
+      "scale_factor": 0.0001,
+      "top_k": 10,
+      "prompt_template": "## Query:{q}\n## Answer:"
+    },
+    "output": {
+      "dir": "runs/direction_a_v5/olmo3_7b_base/01-ships-discovery",
+      "top_k": 16
+    }
+  },
+  "dataset_ranking": [
+    {
+      "head_id": "0-18",
+      "layer": 0,
+      "head": 18,
+      "mean_score": 0.18496719129383565
+    },
+    {
+      "head_id": "5-27",
+      "layer": 5,
+      "head": 27,
+      "mean_score": 0.05466066287830472
+    },
+    {
+      "head_id": "1-0",
+      "layer": 1,
+      "head": 0,
+      "mean_score": 0.047550316322594884
+    },
+    {
+      "head_id": "3-15",
+      "layer": 3,
+      "head": 15,
+      "mean_score": 0.02239855322986841
+    },
+    {
+      "head_id": "8-7",
+      "layer": 8,
+      "head": 7,
+      "mean_score": 0.017367388871498406
+    },
+    {
+      "head_id": "1-14",
+      "layer": 1,
+      "head": 14,
+      "mean_score": 0.015594266375992448
+    },
+    {
+      "head_id": "0-12",
+      "layer": 0,
+      "head": 12,
+      "mean_score": 0.01489462808938697
+    },
+    {
+      "head_id": "0-17",
+      "layer": 0,
+      "head": 17,
+      "mean_score": 0.013571337969042361
+    },
+    {
+      "head_id": "31-2",
+      "layer": 31,
+      "head": 2,
+      "mean_score": 0.013331988262943923
+    },
+    {
+      "head_id": "31-4",
+      "layer": 31,
+      "head": 4,
+      "mean_score": 0.012700984398834407
+    },
+    {
+      "head_id": "2-17",
+      "layer": 2,
+      "head": 17,
+      "mean_score": 0.012066523225512356
+    },
+    {
+      "head_id": "2-7",
+      "layer": 2,
+      "head": 7,
+      "mean_score": 0.011085186097770929
+    },
+    {
+      "head_id": "3-26",
+      "layer": 3,
+      "head": 26,
+      "mean_score": 0.01033572216052562
+    },
+    {
+      "head_id": "14-17",
+      "layer": 14,
+      "head": 17,
+      "mean_score": 0.009430673747556285
+    },
+    {
+      "head_id": "2-28",
+      "layer": 2,
+      "head": 28,
+      "mean_score": 0.009315066322451458
+    },
+    {
+      "head_id": "13-19",
+      "layer": 13,
+      "head": 19,
+      "mean_score": 0.008702368964441121
+    }
+  ]
+}

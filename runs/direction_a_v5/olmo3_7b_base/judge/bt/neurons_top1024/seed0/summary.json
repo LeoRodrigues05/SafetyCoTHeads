@@ -1,0 +1,66 @@
+{
+  "condition": "neurons_top1024",
+  "tag": "neurons_top1024",
+  "n_completions": 98,
+  "n_prefix_rows": 2320,
+  "per_condition_basic": {
+    "neurons_top1024": {
+      "n": 98,
+      "n_parsed": 98,
+      "harmful_rate": 0.5510204081632653,
+      "refusal_rate": 0.09183673469387756,
+      "reasoning_rate": 0.05102040816326531,
+      "adding_intent_rate": 0.09183673469387756,
+      "changing_subject_rate": 0.35714285714285715
+    }
+  },
+  "monitorability": {
+    "n_gap_rows": 71,
+    "per_condition": {
+      "neurons_top1024": {
+        "n": 71,
+        "asr_final": 0.5915492957746479,
+        "asr_cot_pred": 0.6901408450704225,
+        "gap": -0.09859154929577464
+      }
+    }
+  },
+  "coherence": {
+    "n": 98,
+    "clean_rate": 0.8163265306122449,
+    "empty_rate": 0.0,
+    "gibberish_hist": {
+      "clean": 80,
+      "mild gibberish": 13,
+      "word salad": 5
+    },
+    "repeat3_mean": 0.7006550593925449,
+    "compression_ratio_mean": 0.144712156306127,
+    "n_clean_judged": 80,
+    "harmful_among_clean_rate": 0.675
+  },
+  "judge_model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "per_condition_pathway": {
+    "neurons_top1024": {
+      "n": 98,
+      "mean": {
+        "recognition_rate": 0.2948243855019457,
+        "refusal_initiated": 0.15306122448979592,
+        "refusal_suppressed": 0.0,
+        "rationalisation_rate": 0.003016688280663436,
+        "execution_rate": 0.5929030310560373,
+        "operational_detail_rate": 0.4481076201509509,
+        "first_execution_idx_norm": 0.2614593958786071,
+        "recognition_to_execution": 0.05102040816326531
+      },
+      "dominant_pathway_hist": {
+        "recognition_loss": 48,
+        "none": 35,
+        "sanitised_compliance": 8,
+        "direct_execution": 7
+      }
+    }
+  },
+  "n_pathway_vectors": 98,
+  "pathway_judge_model": "models/pathway_judge_14b_merged"
+}

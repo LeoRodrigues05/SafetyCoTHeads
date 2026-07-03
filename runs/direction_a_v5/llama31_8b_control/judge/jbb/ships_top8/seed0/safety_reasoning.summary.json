@@ -1,0 +1,10 @@
+{
+  "n": 100,
+  "n_parsed": 100,
+  "safety_reasoning_rate": 0.0,
+  "first_position_norm_mean": null,
+  "extent_sentence_count_mean": 0.0,
+  "extent_fraction_mean": 0.0,
+  "first_section_hist": {},
+  "span_category_hist": {}
+}

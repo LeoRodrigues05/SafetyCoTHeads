@@ -1,0 +1,336 @@
+{
+  "judge_model": "models/pathway_judge_14b_merged",
+  "n_conditions": 11,
+  "conditions": [
+    {
+      "condition": "baseline",
+      "tag": "baseline",
+      "n_completions": 100,
+      "n_prefix_rows": 2560,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "baseline": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.16552838933363617,
+            "refusal_initiated": 0.24,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.006313310492189803,
+            "execution_rate": 0.7912150417179106,
+            "operational_detail_rate": 0.4921569656332148,
+            "first_execution_idx_norm": 0.10045874602979867,
+            "recognition_to_execution": 0.07
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 68,
+            "sanitised_compliance": 6,
+            "none": 15,
+            "direct_execution": 11
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "neurons_top1024",
+      "tag": "neurons_top1024",
+      "n_completions": 100,
+      "n_prefix_rows": 2053,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "neurons_top1024": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.0977483191603471,
+            "refusal_initiated": 0.14,
+            "refusal_suppressed": 0.0,
+            "rationalisation_rate": 0.0035781581602477124,
+            "execution_rate": 0.7835264045407867,
+            "operational_detail_rate": 0.4170299401052708,
+            "first_execution_idx_norm": 0.11531155106970324,
+            "recognition_to_execution": 0.08
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 66,
+            "direct_execution": 13,
+            "sanitised_compliance": 6,
+            "none": 15
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "neurons_top256",
+      "tag": "neurons_top256",
+      "n_completions": 100,
+      "n_prefix_rows": 2694,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "neurons_top256": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.1423014505370509,
+            "refusal_initiated": 0.3,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.012318582804381644,
+            "execution_rate": 0.7730810641070984,
+            "operational_detail_rate": 0.5246927125436958,
+            "first_execution_idx_norm": 0.13220190925819728,
+            "recognition_to_execution": 0.13
+          },
+          "dominant_pathway_hist": {
+            "sanitised_compliance": 12,
+            "direct_execution": 16,
+            "recognition_loss": 59,
+            "none": 12,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "neurons_top512",
+      "tag": "neurons_top512",
+      "n_completions": 100,
+      "n_prefix_rows": 2341,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "neurons_top512": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.12800473187147812,
+            "refusal_initiated": 0.2,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.006726678876678877,
+            "execution_rate": 0.791461903411044,
+            "operational_detail_rate": 0.45098919603510157,
+            "first_execution_idx_norm": 0.0495153173451935,
+            "recognition_to_execution": 0.1
+          },
+          "dominant_pathway_hist": {
+            "direct_execution": 25,
+            "sanitised_compliance": 7,
+            "recognition_loss": 58,
+            "none": 9,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "ships_top3",
+      "tag": "ships_top3",
+      "n_completions": 100,
+      "n_prefix_rows": 2711,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "ships_top3": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.19038253867244134,
+            "refusal_initiated": 0.3,
+            "refusal_suppressed": 0.02,
+            "rationalisation_rate": 0.024616728152893525,
+            "execution_rate": 0.7164142449800047,
+            "operational_detail_rate": 0.5753203654523633,
+            "first_execution_idx_norm": 0.1759689081729207,
+            "recognition_to_execution": 0.2
+          },
+          "dominant_pathway_hist": {
+            "none": 22,
+            "recognition_loss": 60,
+            "direct_execution": 10,
+            "refusal_loss": 2,
+            "sanitised_compliance": 6
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "ships_top5",
+      "tag": "ships_top5",
+      "n_completions": 100,
+      "n_prefix_rows": 2720,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "ships_top5": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.19227148930735516,
+            "refusal_initiated": 0.3,
+            "refusal_suppressed": 0.02,
+            "rationalisation_rate": 0.02132254052742894,
+            "execution_rate": 0.7312965284998654,
+            "operational_detail_rate": 0.5975980739955361,
+            "first_execution_idx_norm": 0.15525487271416266,
+            "recognition_to_execution": 0.19
+          },
+          "dominant_pathway_hist": {
+            "sanitised_compliance": 8,
+            "none": 19,
+            "recognition_loss": 61,
+            "refusal_loss": 2,
+            "direct_execution": 10
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "ships_top8",
+      "tag": "ships_top8",
+      "n_completions": 100,
+      "n_prefix_rows": 2514,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "ships_top8": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.23394085467908066,
+            "refusal_initiated": 0.23,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.021101297344094817,
+            "execution_rate": 0.737215538838453,
+            "operational_detail_rate": 0.6078568134287611,
+            "first_execution_idx_norm": 0.14893265491915014,
+            "recognition_to_execution": 0.18
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 55,
+            "none": 15,
+            "sanitised_compliance": 15,
+            "rationalised_compliance": 3,
+            "direct_execution": 11,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "steering_a0.5",
+      "tag": "steering_a0.5",
+      "n_completions": 100,
+      "n_prefix_rows": 2293,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "steering_a0.5": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.2697449465300365,
+            "refusal_initiated": 0.3,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.005022602397602398,
+            "execution_rate": 0.7012000343091296,
+            "operational_detail_rate": 0.541506835414294,
+            "first_execution_idx_norm": 0.1589993482647193,
+            "recognition_to_execution": 0.13
+          },
+          "dominant_pathway_hist": {
+            "sanitised_compliance": 12,
+            "none": 25,
+            "direct_execution": 12,
+            "recognition_loss": 50,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "steering_a1.0",
+      "tag": "steering_a1.0",
+      "n_completions": 100,
+      "n_prefix_rows": 2522,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "steering_a1.0": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.26939437308329567,
+            "refusal_initiated": 0.11,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.01924379633887453,
+            "execution_rate": 0.6133748343804295,
+            "operational_detail_rate": 0.5145470402955342,
+            "first_execution_idx_norm": 0.292486564343178,
+            "recognition_to_execution": 0.19
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 48,
+            "none": 30,
+            "sanitised_compliance": 12,
+            "direct_execution": 8,
+            "rationalised_compliance": 1,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "steering_a1.5",
+      "tag": "steering_a1.5",
+      "n_completions": 100,
+      "n_prefix_rows": 1962,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "steering_a1.5": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.40864916809165786,
+            "refusal_initiated": 0.05,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.01652198039740401,
+            "execution_rate": 0.3780841809252713,
+            "operational_detail_rate": 0.30281639915142333,
+            "first_execution_idx_norm": 0.4598360840140515,
+            "recognition_to_execution": 0.15
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 31,
+            "none": 56,
+            "sanitised_compliance": 9,
+            "direct_execution": 3,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    },
+    {
+      "condition": "steering_ablate",
+      "tag": "steering_ablate",
+      "n_completions": 100,
+      "n_prefix_rows": 2472,
+      "n_pathway_vectors": 100,
+      "per_condition_pathway": {
+        "steering_ablate": {
+          "n": 100,
+          "mean": {
+            "recognition_rate": 0.1394265132334781,
+            "refusal_initiated": 0.25,
+            "refusal_suppressed": 0.01,
+            "rationalisation_rate": 0.004384470303547916,
+            "execution_rate": 0.8088702705415323,
+            "operational_detail_rate": 0.5167993821653414,
+            "first_execution_idx_norm": 0.10315486457570415,
+            "recognition_to_execution": 0.09
+          },
+          "dominant_pathway_hist": {
+            "recognition_loss": 65,
+            "sanitised_compliance": 7,
+            "none": 12,
+            "direct_execution": 15,
+            "refusal_loss": 1
+          }
+        }
+      },
+      "pathway_judge_model": "models/pathway_judge_14b_merged"
+    }
+  ]
+}

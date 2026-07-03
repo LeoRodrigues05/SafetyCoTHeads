@@ -1,0 +1,6094 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Direction A v5 Safety Reasoning Report</title>
+  <style>
+:root {
+  color-scheme: light;
+  --ink: #172026;
+  --muted: #64717d;
+  --line: #d9e0e6;
+  --soft: #eef3f6;
+  --paper: #ffffff;
+  --bg: #f7f8fa;
+  --accent: #256c7d;
+  --warn: #a15c20;
+  --mark: #fff0a8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+main { max-width: 1320px; margin: 0 auto; padding: 26px 22px 46px; }
+header { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 22px; }
+h1 { margin: 0 0 8px; font-size: 28px; line-height: 1.12; letter-spacing: 0; }
+h2 { margin: 30px 0 12px; font-size: 19px; line-height: 1.25; letter-spacing: 0; }
+h3 { margin: 18px 0 8px; font-size: 15px; line-height: 1.25; letter-spacing: 0; }
+p { margin: 8px 0; color: var(--muted); line-height: 1.45; }
+table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); margin: 12px 0 22px; }
+th, td { border-bottom: 1px solid #e7ebef; padding: 8px 9px; text-align: left; vertical-align: top; font-size: 13px; }
+th { background: var(--soft); font-weight: 650; color: #24313a; position: sticky; top: 0; z-index: 1; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+code { background: var(--soft); border-radius: 4px; padding: 2px 4px; }
+.muted { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(190px, 1fr)); gap: 12px; }
+.stat { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.stat .value { margin-top: 6px; font-size: 24px; font-weight: 720; font-variant-numeric: tabular-nums; }
+.stat .sub { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.callout { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin: 12px 0 22px; }
+.tag { display: inline-block; border: 1px solid var(--line); background: var(--soft); border-radius: 999px; padding: 2px 8px; margin: 2px 3px 2px 0; font-size: 12px; }
+.tag.hot { border-color: #e0b68e; background: #fff5e8; color: #73420d; }
+.tag.good { border-color: #9ac8b6; background: #ebf8f3; color: #14533b; }
+.sample { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin: 14px 0; }
+.sample-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+pre.completion {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #fbfcfd;
+  border: 1px solid #e1e7ec;
+  border-radius: 6px;
+  padding: 12px;
+  max-height: 720px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+}
+mark { background: var(--mark); padding: 1px 2px; border-radius: 3px; }
+mark.judge { background: #ccefe3; }
+mark.heuristic { background: #fff0a8; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  th, td { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Direction A v5 Safety Reasoning Report</h1>
+  <p>Generated 2026-06-26T14:48:24+00:00. Judge-derived location metrics appear only for cells with completed v5 judge outputs.</p>
+</header>
+<div class="grid">
+<div class="stat"><div class="label">Cells</div><div class="value">106</div><div class="sub">106 with summary.json</div></div>
+<div class="stat"><div class="label">Generated rows</div><div class="value">10494</div><div class="sub">raw completions available</div></div>
+<div class="stat"><div class="label">Prefix-labeled cells</div><div class="value">105</div><div class="sub">can locate reasoning in trace</div></div>
+<div class="stat"><div class="label">Models</div><div class="value">5</div><div class="sub">Llama 3.1 8B, Olmo3 7B Base, Olmo3 7B Base Own, Olmo3 7B Think, Qwen3 8B</div></div>
+</div>
+<section class="callout">
+<h2>Safety Reasoning Test</h2>
+<p>This report separates two signals. The existing final-answer <code>reasoning_about_safety</code> metric says whether the completed answer contains explicit safety reasoning. The new CoT-location view looks inside trajectory prefixes and asks where safety recognition or refusal reasoning first appears.</p>
+<p><code>first safety location</code> is normalized from 0.0 at the first prefix to 1.0 at the final prefix. Lower values mean safety reasoning appears earlier. The label columns are parent-level rates: a trace counts once if any prefix expressed that label.</p>
+</section>
+<h2>Coverage</h2>
+<table>
+<thead><tr>
+<th>model</th>
+<th>dataset</th>
+<th>condition</th>
+<th class="num">gen rows</th>
+<th>summary</th>
+<th>prefix labels</th>
+<th>completion file</th>
+</tr></thead><tbody>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/bt/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/llama31_8b_control/gen/jbb/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/bt/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base/gen/jbb/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/bt/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_base_own/gen/jbb/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/bt/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>no</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/olmo3_7b_think/gen/jbb/steering_ablate/seed0/completions_steering_ablate.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">98</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/bt/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/baseline/seed0/completions_baseline.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/ships_top3/seed0/completions_ships_top3.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/ships_top5/seed0/completions_ships_top5.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/ships_top8/seed0/completions_ships_top8.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/neurons_top256/seed0/completions_neurons_top256.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/neurons_top512/seed0/completions_neurons_top512.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/neurons_top1024/seed0/completions_neurons_top1024.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/steering_a0.5/seed0/completions_steering_a0.5.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/steering_a1.0/seed0/completions_steering_a1.0.jsonl</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">100</td>
+<td>yes</td>
+<td>yes</td>
+<td>/work/Work/SafetyCoTHeads/runs/direction_a_v5/qwen3_8b/gen/jbb/steering_a1.5/seed0/completions_steering_a1.5.jsonl</td>
+</tr>
+</tbody></table>
+<h2>Existing V5 Metrics</h2>
+<table>
+<thead><tr>
+<th>model</th>
+<th>dataset</th>
+<th>condition</th>
+<th class="num">clean</th>
+<th class="num">ASR clean</th>
+<th class="num">harmful</th>
+<th class="num">refusal</th>
+<th class="num">final safety reasoning</th>
+<th class="num">monitor gap</th>
+<th class="num">recognition</th>
+<th class="num">refusal suppressed</th>
+<th class="num">execution</th>
+</tr></thead><tbody>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">100.0%</td>
+<td class="num">9.2%</td>
+<td class="num">9.2%</td>
+<td class="num">76.5%</td>
+<td class="num">7.1%</td>
+<td class="num">+0.026</td>
+<td class="num">50.3%</td>
+<td class="num">0.0%</td>
+<td class="num">22.8%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">83.7%</td>
+<td class="num">19.5%</td>
+<td class="num">16.3%</td>
+<td class="num">55.1%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.134</td>
+<td class="num">44.6%</td>
+<td class="num">0.0%</td>
+<td class="num">39.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">75.5%</td>
+<td class="num">13.5%</td>
+<td class="num">10.2%</td>
+<td class="num">36.7%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.316</td>
+<td class="num">42.2%</td>
+<td class="num">2.0%</td>
+<td class="num">42.9%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">57.1%</td>
+<td class="num">16.1%</td>
+<td class="num">9.2%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.409</td>
+<td class="num">19.7%</td>
+<td class="num">0.0%</td>
+<td class="num">71.5%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">99.0%</td>
+<td class="num">15.5%</td>
+<td class="num">15.3%</td>
+<td class="num">70.4%</td>
+<td class="num">25.5%</td>
+<td class="num">+0.011</td>
+<td class="num">37.8%</td>
+<td class="num">0.0%</td>
+<td class="num">28.4%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98.0%</td>
+<td class="num">20.8%</td>
+<td class="num">20.4%</td>
+<td class="num">58.2%</td>
+<td class="num">30.6%</td>
+<td class="num">+0.010</td>
+<td class="num">33.1%</td>
+<td class="num">0.0%</td>
+<td class="num">35.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">93.9%</td>
+<td class="num">45.7%</td>
+<td class="num">42.9%</td>
+<td class="num">29.6%</td>
+<td class="num">46.9%</td>
+<td class="num">+0.000</td>
+<td class="num">24.9%</td>
+<td class="num">3.1%</td>
+<td class="num">52.7%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">100.0%</td>
+<td class="num">30.6%</td>
+<td class="num">30.6%</td>
+<td class="num">50.0%</td>
+<td class="num">18.4%</td>
+<td class="num">+0.071</td>
+<td class="num">37.2%</td>
+<td class="num">0.0%</td>
+<td class="num">42.7%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">100.0%</td>
+<td class="num">30.6%</td>
+<td class="num">30.6%</td>
+<td class="num">50.0%</td>
+<td class="num">18.4%</td>
+<td class="num">+0.071</td>
+<td class="num">37.2%</td>
+<td class="num">0.0%</td>
+<td class="num">42.7%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">100.0%</td>
+<td class="num">30.6%</td>
+<td class="num">30.6%</td>
+<td class="num">50.0%</td>
+<td class="num">18.4%</td>
+<td class="num">+0.071</td>
+<td class="num">37.2%</td>
+<td class="num">0.0%</td>
+<td class="num">42.7%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">97.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">95.0%</td>
+<td class="num">4.0%</td>
+<td class="num">-0.031</td>
+<td class="num">43.2%</td>
+<td class="num">0.0%</td>
+<td class="num">6.5%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">78.0%</td>
+<td class="num">6.4%</td>
+<td class="num">5.0%</td>
+<td class="num">68.0%</td>
+<td class="num">2.0%</td>
+<td class="num">-0.270</td>
+<td class="num">55.7%</td>
+<td class="num">1.0%</td>
+<td class="num">25.3%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">43.0%</td>
+<td class="num">2.3%</td>
+<td class="num">1.0%</td>
+<td class="num">40.0%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.448</td>
+<td class="num">29.7%</td>
+<td class="num">1.0%</td>
+<td class="num">43.5%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">45.0%</td>
+<td class="num">11.1%</td>
+<td class="num">5.0%</td>
+<td class="num">4.0%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.312</td>
+<td class="num">23.3%</td>
+<td class="num">0.0%</td>
+<td class="num">70.4%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">94.0%</td>
+<td class="num">4.3%</td>
+<td class="num">4.0%</td>
+<td class="num">90.0%</td>
+<td class="num">18.0%</td>
+<td class="num">-0.042</td>
+<td class="num">28.3%</td>
+<td class="num">1.0%</td>
+<td class="num">15.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">92.0%</td>
+<td class="num">9.8%</td>
+<td class="num">9.0%</td>
+<td class="num">82.0%</td>
+<td class="num">20.0%</td>
+<td class="num">-0.090</td>
+<td class="num">30.7%</td>
+<td class="num">0.0%</td>
+<td class="num">23.3%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">84.0%</td>
+<td class="num">42.9%</td>
+<td class="num">36.0%</td>
+<td class="num">46.0%</td>
+<td class="num">50.0%</td>
+<td class="num">-0.192</td>
+<td class="num">22.1%</td>
+<td class="num">0.0%</td>
+<td class="num">55.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">94.0%</td>
+<td class="num">25.5%</td>
+<td class="num">24.0%</td>
+<td class="num">70.0%</td>
+<td class="num">26.0%</td>
+<td class="num">-0.056</td>
+<td class="num">34.9%</td>
+<td class="num">0.0%</td>
+<td class="num">31.5%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">94.0%</td>
+<td class="num">25.5%</td>
+<td class="num">24.0%</td>
+<td class="num">70.0%</td>
+<td class="num">26.0%</td>
+<td class="num">-0.056</td>
+<td class="num">34.9%</td>
+<td class="num">0.0%</td>
+<td class="num">31.5%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">94.0%</td>
+<td class="num">25.5%</td>
+<td class="num">24.0%</td>
+<td class="num">70.0%</td>
+<td class="num">26.0%</td>
+<td class="num">-0.056</td>
+<td class="num">34.9%</td>
+<td class="num">0.0%</td>
+<td class="num">31.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">80.6%</td>
+<td class="num">63.3%</td>
+<td class="num">51.0%</td>
+<td class="num">11.2%</td>
+<td class="num">3.1%</td>
+<td class="num">-0.055</td>
+<td class="num">24.9%</td>
+<td class="num">0.0%</td>
+<td class="num">65.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">82.7%</td>
+<td class="num">69.1%</td>
+<td class="num">57.1%</td>
+<td class="num">11.2%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.042</td>
+<td class="num">25.2%</td>
+<td class="num">0.0%</td>
+<td class="num">61.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">83.7%</td>
+<td class="num">72.0%</td>
+<td class="num">60.2%</td>
+<td class="num">11.2%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.026</td>
+<td class="num">27.1%</td>
+<td class="num">0.0%</td>
+<td class="num">61.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">90.8%</td>
+<td class="num">69.7%</td>
+<td class="num">63.3%</td>
+<td class="num">10.2%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.038</td>
+<td class="num">19.9%</td>
+<td class="num">1.0%</td>
+<td class="num">66.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">75.5%</td>
+<td class="num">60.8%</td>
+<td class="num">45.9%</td>
+<td class="num">10.2%</td>
+<td class="num">2.0%</td>
+<td class="num">-0.094</td>
+<td class="num">25.0%</td>
+<td class="num">0.0%</td>
+<td class="num">64.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">85.7%</td>
+<td class="num">61.9%</td>
+<td class="num">53.1%</td>
+<td class="num">13.3%</td>
+<td class="num">3.1%</td>
+<td class="num">-0.071</td>
+<td class="num">25.5%</td>
+<td class="num">1.0%</td>
+<td class="num">63.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">81.6%</td>
+<td class="num">67.5%</td>
+<td class="num">55.1%</td>
+<td class="num">9.2%</td>
+<td class="num">5.1%</td>
+<td class="num">-0.099</td>
+<td class="num">29.5%</td>
+<td class="num">0.0%</td>
+<td class="num">59.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">83.7%</td>
+<td class="num">65.9%</td>
+<td class="num">55.1%</td>
+<td class="num">14.3%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.096</td>
+<td class="num">25.0%</td>
+<td class="num">0.0%</td>
+<td class="num">66.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">71.4%</td>
+<td class="num">64.3%</td>
+<td class="num">45.9%</td>
+<td class="num">13.3%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.111</td>
+<td class="num">31.6%</td>
+<td class="num">1.0%</td>
+<td class="num">57.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">74.5%</td>
+<td class="num">68.5%</td>
+<td class="num">51.0%</td>
+<td class="num">12.2%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.231</td>
+<td class="num">34.6%</td>
+<td class="num">1.0%</td>
+<td class="num">50.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">80.6%</td>
+<td class="num">63.3%</td>
+<td class="num">51.0%</td>
+<td class="num">11.2%</td>
+<td class="num">2.0%</td>
+<td class="num">-0.056</td>
+<td class="num">19.8%</td>
+<td class="num">0.0%</td>
+<td class="num">69.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">80.0%</td>
+<td class="num">66.2%</td>
+<td class="num">53.0%</td>
+<td class="num">25.0%</td>
+<td class="num">13.0%</td>
+<td class="num">-0.157</td>
+<td class="num">16.6%</td>
+<td class="num">1.0%</td>
+<td class="num">79.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">90.0%</td>
+<td class="num">74.4%</td>
+<td class="num">67.0%</td>
+<td class="num">22.0%</td>
+<td class="num">14.0%</td>
+<td class="num">-0.054</td>
+<td class="num">19.5%</td>
+<td class="num">3.0%</td>
+<td class="num">74.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">88.0%</td>
+<td class="num">68.2%</td>
+<td class="num">60.0%</td>
+<td class="num">23.0%</td>
+<td class="num">14.0%</td>
+<td class="num">-0.151</td>
+<td class="num">20.5%</td>
+<td class="num">2.0%</td>
+<td class="num">73.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">90.0%</td>
+<td class="num">66.7%</td>
+<td class="num">60.0%</td>
+<td class="num">27.0%</td>
+<td class="num">10.0%</td>
+<td class="num">-0.055</td>
+<td class="num">18.1%</td>
+<td class="num">1.0%</td>
+<td class="num">72.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">80.0%</td>
+<td class="num">70.0%</td>
+<td class="num">56.0%</td>
+<td class="num">20.0%</td>
+<td class="num">7.0%</td>
+<td class="num">-0.135</td>
+<td class="num">12.8%</td>
+<td class="num">0.0%</td>
+<td class="num">83.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">79.0%</td>
+<td class="num">64.6%</td>
+<td class="num">51.0%</td>
+<td class="num">22.0%</td>
+<td class="num">11.0%</td>
+<td class="num">-0.157</td>
+<td class="num">16.8%</td>
+<td class="num">0.0%</td>
+<td class="num">82.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">74.0%</td>
+<td class="num">64.9%</td>
+<td class="num">48.0%</td>
+<td class="num">20.0%</td>
+<td class="num">8.0%</td>
+<td class="num">-0.216</td>
+<td class="num">10.2%</td>
+<td class="num">0.0%</td>
+<td class="num">84.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">85.0%</td>
+<td class="num">71.8%</td>
+<td class="num">61.0%</td>
+<td class="num">18.0%</td>
+<td class="num">12.0%</td>
+<td class="num">-0.067</td>
+<td class="num">18.7%</td>
+<td class="num">0.0%</td>
+<td class="num">77.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">70.0%</td>
+<td class="num">81.4%</td>
+<td class="num">57.0%</td>
+<td class="num">10.0%</td>
+<td class="num">3.0%</td>
+<td class="num">-0.227</td>
+<td class="num">12.9%</td>
+<td class="num">0.0%</td>
+<td class="num">84.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">78.0%</td>
+<td class="num">73.1%</td>
+<td class="num">57.0%</td>
+<td class="num">20.0%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.225</td>
+<td class="num">15.5%</td>
+<td class="num">1.0%</td>
+<td class="num">74.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">78.0%</td>
+<td class="num">69.2%</td>
+<td class="num">54.0%</td>
+<td class="num">21.0%</td>
+<td class="num">9.0%</td>
+<td class="num">-0.182</td>
+<td class="num">15.9%</td>
+<td class="num">0.0%</td>
+<td class="num">82.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">80.6%</td>
+<td class="num">63.3%</td>
+<td class="num">51.0%</td>
+<td class="num">11.2%</td>
+<td class="num">4.1%</td>
+<td class="num">-0.055</td>
+<td class="num">23.2%</td>
+<td class="num">0.0%</td>
+<td class="num">65.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">87.8%</td>
+<td class="num">65.1%</td>
+<td class="num">57.1%</td>
+<td class="num">11.2%</td>
+<td class="num">2.0%</td>
+<td class="num">-0.051</td>
+<td class="num">19.2%</td>
+<td class="num">0.0%</td>
+<td class="num">65.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">91.8%</td>
+<td class="num">68.9%</td>
+<td class="num">63.3%</td>
+<td class="num">11.2%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.027</td>
+<td class="num">21.2%</td>
+<td class="num">0.0%</td>
+<td class="num">68.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">92.9%</td>
+<td class="num">72.5%</td>
+<td class="num">67.3%</td>
+<td class="num">10.2%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.060</td>
+<td class="num">19.4%</td>
+<td class="num">0.0%</td>
+<td class="num">73.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">60.2%</td>
+<td class="num">54.2%</td>
+<td class="num">32.7%</td>
+<td class="num">12.2%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.164</td>
+<td class="num">28.5%</td>
+<td class="num">0.0%</td>
+<td class="num">61.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">61.2%</td>
+<td class="num">53.3%</td>
+<td class="num">32.7%</td>
+<td class="num">13.3%</td>
+<td class="num">1.0%</td>
+<td class="num">-0.207</td>
+<td class="num">22.6%</td>
+<td class="num">0.0%</td>
+<td class="num">61.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">55.1%</td>
+<td class="num">55.6%</td>
+<td class="num">30.6%</td>
+<td class="num">11.2%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.254</td>
+<td class="num">20.3%</td>
+<td class="num">0.0%</td>
+<td class="num">66.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">78.6%</td>
+<td class="num">57.1%</td>
+<td class="num">44.9%</td>
+<td class="num">12.2%</td>
+<td class="num">2.0%</td>
+<td class="num">-0.100</td>
+<td class="num">35.2%</td>
+<td class="num">0.0%</td>
+<td class="num">54.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">69.4%</td>
+<td class="num">76.5%</td>
+<td class="num">53.1%</td>
+<td class="num">9.2%</td>
+<td class="num">0.0%</td>
+<td class="num">+0.000</td>
+<td class="num">43.3%</td>
+<td class="num">1.0%</td>
+<td class="num">36.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">61.2%</td>
+<td class="num">55.0%</td>
+<td class="num">33.7%</td>
+<td class="num">14.3%</td>
+<td class="num">0.0%</td>
+<td class="num">-0.200</td>
+<td class="num">74.4%</td>
+<td class="num">0.0%</td>
+<td class="num">8.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">82.7%</td>
+<td class="num">67.9%</td>
+<td class="num">56.1%</td>
+<td class="num">10.2%</td>
+<td class="num">3.1%</td>
+<td class="num">-0.042</td>
+<td class="num">29.3%</td>
+<td class="num">1.0%</td>
+<td class="num">62.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">80.0%</td>
+<td class="num">66.2%</td>
+<td class="num">53.0%</td>
+<td class="num">25.0%</td>
+<td class="num">13.0%</td>
+<td class="num">-0.157</td>
+<td class="num">16.6%</td>
+<td class="num">1.0%</td>
+<td class="num">79.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">85.0%</td>
+<td class="num">69.4%</td>
+<td class="num">59.0%</td>
+<td class="num">24.0%</td>
+<td class="num">15.0%</td>
+<td class="num">-0.118</td>
+<td class="num">19.0%</td>
+<td class="num">2.0%</td>
+<td class="num">71.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">88.0%</td>
+<td class="num">71.6%</td>
+<td class="num">63.0%</td>
+<td class="num">23.0%</td>
+<td class="num">18.0%</td>
+<td class="num">-0.086</td>
+<td class="num">19.2%</td>
+<td class="num">2.0%</td>
+<td class="num">73.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">89.0%</td>
+<td class="num">70.8%</td>
+<td class="num">63.0%</td>
+<td class="num">21.0%</td>
+<td class="num">19.0%</td>
+<td class="num">-0.065</td>
+<td class="num">23.4%</td>
+<td class="num">1.0%</td>
+<td class="num">73.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">77.0%</td>
+<td class="num">62.3%</td>
+<td class="num">48.0%</td>
+<td class="num">24.0%</td>
+<td class="num">6.0%</td>
+<td class="num">-0.196</td>
+<td class="num">14.2%</td>
+<td class="num">1.0%</td>
+<td class="num">77.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">68.0%</td>
+<td class="num">72.1%</td>
+<td class="num">49.0%</td>
+<td class="num">14.0%</td>
+<td class="num">5.0%</td>
+<td class="num">-0.253</td>
+<td class="num">12.8%</td>
+<td class="num">1.0%</td>
+<td class="num">79.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">51.0%</td>
+<td class="num">66.7%</td>
+<td class="num">34.0%</td>
+<td class="num">12.0%</td>
+<td class="num">3.0%</td>
+<td class="num">-0.359</td>
+<td class="num">9.8%</td>
+<td class="num">0.0%</td>
+<td class="num">78.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">83.0%</td>
+<td class="num">61.4%</td>
+<td class="num">51.0%</td>
+<td class="num">27.0%</td>
+<td class="num">15.0%</td>
+<td class="num">-0.058</td>
+<td class="num">27.0%</td>
+<td class="num">1.0%</td>
+<td class="num">70.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">79.0%</td>
+<td class="num">69.6%</td>
+<td class="num">55.0%</td>
+<td class="num">15.0%</td>
+<td class="num">3.0%</td>
+<td class="num">-0.114</td>
+<td class="num">26.9%</td>
+<td class="num">1.0%</td>
+<td class="num">61.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">68.0%</td>
+<td class="num">75.0%</td>
+<td class="num">51.0%</td>
+<td class="num">14.0%</td>
+<td class="num">4.0%</td>
+<td class="num">-0.175</td>
+<td class="num">40.9%</td>
+<td class="num">1.0%</td>
+<td class="num">37.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">83.0%</td>
+<td class="num">69.9%</td>
+<td class="num">58.0%</td>
+<td class="num">23.0%</td>
+<td class="num">15.0%</td>
+<td class="num">-0.090</td>
+<td class="num">13.9%</td>
+<td class="num">1.0%</td>
+<td class="num">80.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">99.0%</td>
+<td class="num">2.1%</td>
+<td class="num">2.0%</td>
+<td class="num">79.6%</td>
+<td class="num">92.9%</td>
+<td class="num">-0.041</td>
+<td class="num">89.7%</td>
+<td class="num">6.1%</td>
+<td class="num">27.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">96.9%</td>
+<td class="num">3.2%</td>
+<td class="num">3.1%</td>
+<td class="num">72.4%</td>
+<td class="num">88.8%</td>
+<td class="num">-0.031</td>
+<td class="num">56.2%</td>
+<td class="num">7.1%</td>
+<td class="num">28.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">93.9%</td>
+<td class="num">4.3%</td>
+<td class="num">4.1%</td>
+<td class="num">68.4%</td>
+<td class="num">83.7%</td>
+<td class="num">-0.010</td>
+<td class="num">55.8%</td>
+<td class="num">13.3%</td>
+<td class="num">29.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">94.9%</td>
+<td class="num">2.2%</td>
+<td class="num">2.0%</td>
+<td class="num">72.4%</td>
+<td class="num">85.7%</td>
+<td class="num">-0.031</td>
+<td class="num">57.4%</td>
+<td class="num">4.1%</td>
+<td class="num">29.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">99.0%</td>
+<td class="num">3.1%</td>
+<td class="num">3.1%</td>
+<td class="num">82.7%</td>
+<td class="num">91.8%</td>
+<td class="num">-0.051</td>
+<td class="num">57.3%</td>
+<td class="num">7.1%</td>
+<td class="num">29.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">96.9%</td>
+<td class="num">2.1%</td>
+<td class="num">2.0%</td>
+<td class="num">78.6%</td>
+<td class="num">91.8%</td>
+<td class="num">-0.010</td>
+<td class="num">56.3%</td>
+<td class="num">7.1%</td>
+<td class="num">28.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">94.9%</td>
+<td class="num">4.3%</td>
+<td class="num">4.1%</td>
+<td class="num">74.5%</td>
+<td class="num">88.8%</td>
+<td class="num">-0.020</td>
+<td class="num">56.1%</td>
+<td class="num">9.2%</td>
+<td class="num">31.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">100.0%</td>
+<td class="num">5.1%</td>
+<td class="num">5.1%</td>
+<td class="num">75.5%</td>
+<td class="num">89.8%</td>
+<td class="num">-0.031</td>
+<td class="num">59.4%</td>
+<td class="num">3.1%</td>
+<td class="num">27.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">99.0%</td>
+<td class="num">26.8%</td>
+<td class="num">26.5%</td>
+<td class="num">55.1%</td>
+<td class="num">77.6%</td>
+<td class="num">-0.041</td>
+<td class="num">56.1%</td>
+<td class="num">20.4%</td>
+<td class="num">29.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">100.0%</td>
+<td class="num">71.4%</td>
+<td class="num">71.4%</td>
+<td class="num">7.1%</td>
+<td class="num">7.1%</td>
+<td class="num">-0.061</td>
+<td class="num">45.1%</td>
+<td class="num">16.3%</td>
+<td class="num">53.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">96.9%</td>
+<td class="num">3.2%</td>
+<td class="num">3.1%</td>
+<td class="num">75.5%</td>
+<td class="num">90.8%</td>
+<td class="num">-0.041</td>
+<td class="num">57.7%</td>
+<td class="num">2.0%</td>
+<td class="num">29.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">96.0%</td>
+<td class="num">4.2%</td>
+<td class="num">4.0%</td>
+<td class="num">90.0%</td>
+<td class="num">94.0%</td>
+<td class="num">-0.020</td>
+<td class="num">59.2%</td>
+<td class="num">16.0%</td>
+<td class="num">23.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">97.0%</td>
+<td class="num">9.3%</td>
+<td class="num">9.0%</td>
+<td class="num">86.0%</td>
+<td class="num">95.0%</td>
+<td class="num">-0.050</td>
+<td class="num">55.3%</td>
+<td class="num">10.0%</td>
+<td class="num">28.9%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">98.0%</td>
+<td class="num">9.2%</td>
+<td class="num">9.0%</td>
+<td class="num">88.0%</td>
+<td class="num">98.0%</td>
+<td class="num">-0.020</td>
+<td class="num">56.6%</td>
+<td class="num">17.0%</td>
+<td class="num">29.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">97.0%</td>
+<td class="num">6.2%</td>
+<td class="num">6.0%</td>
+<td class="num">91.0%</td>
+<td class="num">95.0%</td>
+<td class="num">-0.020</td>
+<td class="num">59.5%</td>
+<td class="num">19.0%</td>
+<td class="num">24.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">97.0%</td>
+<td class="num">6.2%</td>
+<td class="num">6.0%</td>
+<td class="num">88.0%</td>
+<td class="num">94.0%</td>
+<td class="num">-0.040</td>
+<td class="num">59.7%</td>
+<td class="num">18.0%</td>
+<td class="num">24.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">98.0%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">94.0%</td>
+<td class="num">97.0%</td>
+<td class="num">-0.040</td>
+<td class="num">58.5%</td>
+<td class="num">14.0%</td>
+<td class="num">23.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">97.0%</td>
+<td class="num">2.1%</td>
+<td class="num">2.0%</td>
+<td class="num">94.0%</td>
+<td class="num">97.0%</td>
+<td class="num">-0.050</td>
+<td class="num">59.4%</td>
+<td class="num">15.0%</td>
+<td class="num">25.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">97.0%</td>
+<td class="num">11.3%</td>
+<td class="num">11.0%</td>
+<td class="num">85.0%</td>
+<td class="num">94.0%</td>
+<td class="num">-0.020</td>
+<td class="num">57.2%</td>
+<td class="num">13.0%</td>
+<td class="num">25.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">97.0%</td>
+<td class="num">42.3%</td>
+<td class="num">41.0%</td>
+<td class="num">54.0%</td>
+<td class="num">80.0%</td>
+<td class="num">-0.170</td>
+<td class="num">40.4%</td>
+<td class="num">19.0%</td>
+<td class="num">49.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">94.0%</td>
+<td class="num">83.0%</td>
+<td class="num">78.0%</td>
+<td class="num">14.0%</td>
+<td class="num">32.0%</td>
+<td class="num">-0.170</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">97.0%</td>
+<td class="num">6.2%</td>
+<td class="num">6.0%</td>
+<td class="num">90.0%</td>
+<td class="num">95.0%</td>
+<td class="num">-0.020</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">95.9%</td>
+<td class="num">6.4%</td>
+<td class="num">6.1%</td>
+<td class="num">64.3%</td>
+<td class="num">86.7%</td>
+<td class="num">-0.082</td>
+<td class="num">62.9%</td>
+<td class="num">2.0%</td>
+<td class="num">20.6%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">98.0%</td>
+<td class="num">7.3%</td>
+<td class="num">7.1%</td>
+<td class="num">66.3%</td>
+<td class="num">85.7%</td>
+<td class="num">-0.031</td>
+<td class="num">64.0%</td>
+<td class="num">5.1%</td>
+<td class="num">19.7%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">98.0%</td>
+<td class="num">5.2%</td>
+<td class="num">5.1%</td>
+<td class="num">64.3%</td>
+<td class="num">83.7%</td>
+<td class="num">-0.071</td>
+<td class="num">62.7%</td>
+<td class="num">2.0%</td>
+<td class="num">21.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">99.0%</td>
+<td class="num">6.2%</td>
+<td class="num">6.1%</td>
+<td class="num">66.3%</td>
+<td class="num">83.7%</td>
+<td class="num">-0.071</td>
+<td class="num">64.3%</td>
+<td class="num">3.1%</td>
+<td class="num">22.4%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">99.0%</td>
+<td class="num">7.2%</td>
+<td class="num">7.1%</td>
+<td class="num">68.4%</td>
+<td class="num">83.7%</td>
+<td class="num">-0.051</td>
+<td class="num">63.9%</td>
+<td class="num">0.0%</td>
+<td class="num">21.9%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">96.9%</td>
+<td class="num">7.4%</td>
+<td class="num">7.1%</td>
+<td class="num">66.3%</td>
+<td class="num">84.7%</td>
+<td class="num">-0.071</td>
+<td class="num">61.7%</td>
+<td class="num">2.0%</td>
+<td class="num">22.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">96.9%</td>
+<td class="num">9.5%</td>
+<td class="num">9.2%</td>
+<td class="num">66.3%</td>
+<td class="num">83.7%</td>
+<td class="num">-0.062</td>
+<td class="num">62.6%</td>
+<td class="num">4.1%</td>
+<td class="num">23.7%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">99.0%</td>
+<td class="num">26.8%</td>
+<td class="num">26.5%</td>
+<td class="num">44.9%</td>
+<td class="num">75.5%</td>
+<td class="num">-0.071</td>
+<td class="num">52.7%</td>
+<td class="num">0.0%</td>
+<td class="num">34.5%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">99.0%</td>
+<td class="num">26.8%</td>
+<td class="num">26.5%</td>
+<td class="num">44.9%</td>
+<td class="num">75.5%</td>
+<td class="num">-0.071</td>
+<td class="num">52.7%</td>
+<td class="num">0.0%</td>
+<td class="num">34.5%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">99.0%</td>
+<td class="num">26.8%</td>
+<td class="num">26.5%</td>
+<td class="num">44.9%</td>
+<td class="num">75.5%</td>
+<td class="num">-0.071</td>
+<td class="num">52.7%</td>
+<td class="num">0.0%</td>
+<td class="num">34.5%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">96.0%</td>
+<td class="num">9.4%</td>
+<td class="num">9.0%</td>
+<td class="num">84.0%</td>
+<td class="num">94.0%</td>
+<td class="num">-0.040</td>
+<td class="num">60.6%</td>
+<td class="num">8.0%</td>
+<td class="num">18.4%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">96.0%</td>
+<td class="num">2.1%</td>
+<td class="num">2.0%</td>
+<td class="num">90.0%</td>
+<td class="num">95.0%</td>
+<td class="num">-0.090</td>
+<td class="num">64.8%</td>
+<td class="num">10.0%</td>
+<td class="num">14.2%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">98.0%</td>
+<td class="num">10.2%</td>
+<td class="num">10.0%</td>
+<td class="num">86.0%</td>
+<td class="num">93.0%</td>
+<td class="num">-0.050</td>
+<td class="num">60.5%</td>
+<td class="num">13.0%</td>
+<td class="num">19.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">100.0%</td>
+<td class="num">13.0%</td>
+<td class="num">13.0%</td>
+<td class="num">85.0%</td>
+<td class="num">97.0%</td>
+<td class="num">-0.060</td>
+<td class="num">59.5%</td>
+<td class="num">10.0%</td>
+<td class="num">18.9%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">96.0%</td>
+<td class="num">6.2%</td>
+<td class="num">6.0%</td>
+<td class="num">88.0%</td>
+<td class="num">94.0%</td>
+<td class="num">-0.040</td>
+<td class="num">62.4%</td>
+<td class="num">8.0%</td>
+<td class="num">18.4%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">97.0%</td>
+<td class="num">8.2%</td>
+<td class="num">8.0%</td>
+<td class="num">88.0%</td>
+<td class="num">92.0%</td>
+<td class="num">-0.070</td>
+<td class="num">60.4%</td>
+<td class="num">8.0%</td>
+<td class="num">20.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">100.0%</td>
+<td class="num">7.0%</td>
+<td class="num">7.0%</td>
+<td class="num">89.0%</td>
+<td class="num">97.0%</td>
+<td class="num">-0.080</td>
+<td class="num">59.1%</td>
+<td class="num">11.0%</td>
+<td class="num">21.8%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">96.0%</td>
+<td class="num">29.2%</td>
+<td class="num">28.0%</td>
+<td class="num">66.0%</td>
+<td class="num">91.0%</td>
+<td class="num">-0.140</td>
+<td class="num">51.7%</td>
+<td class="num">7.0%</td>
+<td class="num">32.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">96.0%</td>
+<td class="num">29.2%</td>
+<td class="num">28.0%</td>
+<td class="num">66.0%</td>
+<td class="num">91.0%</td>
+<td class="num">-0.140</td>
+<td class="num">51.7%</td>
+<td class="num">7.0%</td>
+<td class="num">32.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">96.0%</td>
+<td class="num">29.2%</td>
+<td class="num">28.0%</td>
+<td class="num">66.0%</td>
+<td class="num">91.0%</td>
+<td class="num">-0.140</td>
+<td class="num">51.7%</td>
+<td class="num">7.0%</td>
+<td class="num">32.0%</td>
+</tr>
+</tbody></table>
+<h2>CoT Safety Reasoning And Location</h2>
+<table>
+<thead><tr>
+<th>model</th>
+<th>dataset</th>
+<th>condition</th>
+<th class="num">explicit CoT</th>
+<th class="num">lexical safety reasoning</th>
+<th class="num">judge CoT safety reasoning</th>
+<th class="num">first safety location</th>
+<th class="num">in think</th>
+<th class="num">safety before execution</th>
+<th class="num">risk</th>
+<th class="num">policy</th>
+<th class="num">intent</th>
+<th class="num">refusal init</th>
+<th class="num">refusal suppression</th>
+</tr></thead><tbody>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">69.4%</td>
+<td class="num">98.0%</td>
+<td class="num">0.097</td>
+<td class="num">0.0%</td>
+<td class="num">52.9%</td>
+<td class="num">70.4%</td>
+<td class="num">56.1%</td>
+<td class="num">12.2%</td>
+<td class="num">82.7%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">36.7%</td>
+<td class="num">73.5%</td>
+<td class="num">0.047</td>
+<td class="num">0.0%</td>
+<td class="num">86.4%</td>
+<td class="num">48.0%</td>
+<td class="num">40.8%</td>
+<td class="num">22.4%</td>
+<td class="num">53.1%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">40.8%</td>
+<td class="num">71.4%</td>
+<td class="num">0.099</td>
+<td class="num">0.0%</td>
+<td class="num">70.0%</td>
+<td class="num">32.7%</td>
+<td class="num">35.7%</td>
+<td class="num">37.8%</td>
+<td class="num">43.9%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">35.7%</td>
+<td class="num">0.089</td>
+<td class="num">0.0%</td>
+<td class="num">80.0%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">31.6%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">63.3%</td>
+<td class="num">93.9%</td>
+<td class="num">0.102</td>
+<td class="num">0.0%</td>
+<td class="num">64.3%</td>
+<td class="num">74.5%</td>
+<td class="num">56.1%</td>
+<td class="num">19.4%</td>
+<td class="num">87.8%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">60.2%</td>
+<td class="num">93.9%</td>
+<td class="num">0.097</td>
+<td class="num">0.0%</td>
+<td class="num">68.0%</td>
+<td class="num">69.4%</td>
+<td class="num">53.1%</td>
+<td class="num">15.3%</td>
+<td class="num">82.7%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">43.9%</td>
+<td class="num">91.8%</td>
+<td class="num">0.126</td>
+<td class="num">0.0%</td>
+<td class="num">69.2%</td>
+<td class="num">72.4%</td>
+<td class="num">59.2%</td>
+<td class="num">37.8%</td>
+<td class="num">75.5%</td>
+<td class="num">8.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">53.1%</td>
+<td class="num">90.8%</td>
+<td class="num">0.208</td>
+<td class="num">0.0%</td>
+<td class="num">54.5%</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">53.1%</td>
+<td class="num">90.8%</td>
+<td class="num">0.208</td>
+<td class="num">0.0%</td>
+<td class="num">54.5%</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">53.1%</td>
+<td class="num">90.8%</td>
+<td class="num">0.208</td>
+<td class="num">0.0%</td>
+<td class="num">54.5%</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">93.0%</td>
+<td class="num">99.0%</td>
+<td class="num">0.004</td>
+<td class="num">0.0%</td>
+<td class="num">100.0%</td>
+<td class="num">42.0%</td>
+<td class="num">54.0%</td>
+<td class="num">0.0%</td>
+<td class="num">96.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">55.0%</td>
+<td class="num">87.0%</td>
+<td class="num">0.026</td>
+<td class="num">0.0%</td>
+<td class="num">75.0%</td>
+<td class="num">56.0%</td>
+<td class="num">52.0%</td>
+<td class="num">10.0%</td>
+<td class="num">85.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">60.0%</td>
+<td class="num">85.0%</td>
+<td class="num">0.034</td>
+<td class="num">0.0%</td>
+<td class="num">77.8%</td>
+<td class="num">37.0%</td>
+<td class="num">43.0%</td>
+<td class="num">26.0%</td>
+<td class="num">66.0%</td>
+<td class="num">4.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">4.0%</td>
+<td class="num">31.0%</td>
+<td class="num">0.118</td>
+<td class="num">0.0%</td>
+<td class="num">90.0%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">28.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">88.0%</td>
+<td class="num">97.0%</td>
+<td class="num">0.014</td>
+<td class="num">0.0%</td>
+<td class="num">89.5%</td>
+<td class="num">52.0%</td>
+<td class="num">61.0%</td>
+<td class="num">15.0%</td>
+<td class="num">90.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">66.0%</td>
+<td class="num">93.0%</td>
+<td class="num">0.029</td>
+<td class="num">0.0%</td>
+<td class="num">83.3%</td>
+<td class="num">61.0%</td>
+<td class="num">56.0%</td>
+<td class="num">3.0%</td>
+<td class="num">82.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">49.0%</td>
+<td class="num">85.0%</td>
+<td class="num">0.081</td>
+<td class="num">0.0%</td>
+<td class="num">83.3%</td>
+<td class="num">71.0%</td>
+<td class="num">55.0%</td>
+<td class="num">23.0%</td>
+<td class="num">54.0%</td>
+<td class="num">8.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">76.0%</td>
+<td class="num">87.0%</td>
+<td class="num">0.055</td>
+<td class="num">0.0%</td>
+<td class="num">68.0%</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">76.0%</td>
+<td class="num">87.0%</td>
+<td class="num">0.055</td>
+<td class="num">0.0%</td>
+<td class="num">68.0%</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">76.0%</td>
+<td class="num">87.0%</td>
+<td class="num">0.055</td>
+<td class="num">0.0%</td>
+<td class="num">68.0%</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">15.3%</td>
+<td class="num">59.2%</td>
+<td class="num">0.113</td>
+<td class="num">0.0%</td>
+<td class="num">40.5%</td>
+<td class="num">16.3%</td>
+<td class="num">17.3%</td>
+<td class="num">42.9%</td>
+<td class="num">18.4%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">11.2%</td>
+<td class="num">51.0%</td>
+<td class="num">0.102</td>
+<td class="num">0.0%</td>
+<td class="num">30.8%</td>
+<td class="num">10.2%</td>
+<td class="num">9.2%</td>
+<td class="num">38.8%</td>
+<td class="num">9.2%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">8.2%</td>
+<td class="num">48.0%</td>
+<td class="num">0.131</td>
+<td class="num">0.0%</td>
+<td class="num">36.4%</td>
+<td class="num">8.2%</td>
+<td class="num">7.1%</td>
+<td class="num">35.7%</td>
+<td class="num">6.1%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">8.2%</td>
+<td class="num">40.8%</td>
+<td class="num">0.067</td>
+<td class="num">0.0%</td>
+<td class="num">38.5%</td>
+<td class="num">9.2%</td>
+<td class="num">11.2%</td>
+<td class="num">26.5%</td>
+<td class="num">12.2%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">13.3%</td>
+<td class="num">56.1%</td>
+<td class="num">0.132</td>
+<td class="num">0.0%</td>
+<td class="num">36.1%</td>
+<td class="num">18.4%</td>
+<td class="num">14.3%</td>
+<td class="num">43.9%</td>
+<td class="num">15.3%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">19.4%</td>
+<td class="num">54.1%</td>
+<td class="num">0.089</td>
+<td class="num">0.0%</td>
+<td class="num">24.1%</td>
+<td class="num">17.3%</td>
+<td class="num">12.2%</td>
+<td class="num">38.8%</td>
+<td class="num">12.2%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">7.1%</td>
+<td class="num">58.2%</td>
+<td class="num">0.152</td>
+<td class="num">0.0%</td>
+<td class="num">32.4%</td>
+<td class="num">13.3%</td>
+<td class="num">15.3%</td>
+<td class="num">48.0%</td>
+<td class="num">15.3%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">15.3%</td>
+<td class="num">51.0%</td>
+<td class="num">0.186</td>
+<td class="num">0.0%</td>
+<td class="num">42.4%</td>
+<td class="num">17.3%</td>
+<td class="num">13.3%</td>
+<td class="num">40.8%</td>
+<td class="num">14.3%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">14.3%</td>
+<td class="num">60.2%</td>
+<td class="num">0.040</td>
+<td class="num">0.0%</td>
+<td class="num">62.9%</td>
+<td class="num">10.2%</td>
+<td class="num">7.1%</td>
+<td class="num">50.0%</td>
+<td class="num">7.1%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">11.2%</td>
+<td class="num">54.1%</td>
+<td class="num">0.028</td>
+<td class="num">0.0%</td>
+<td class="num">79.2%</td>
+<td class="num">3.1%</td>
+<td class="num">3.1%</td>
+<td class="num">49.0%</td>
+<td class="num">3.1%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">12.2%</td>
+<td class="num">53.1%</td>
+<td class="num">0.122</td>
+<td class="num">0.0%</td>
+<td class="num">52.5%</td>
+<td class="num">20.4%</td>
+<td class="num">16.3%</td>
+<td class="num">35.7%</td>
+<td class="num">14.3%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">33.0%</td>
+<td class="num">45.0%</td>
+<td class="num">0.202</td>
+<td class="num">0.0%</td>
+<td class="num">27.0%</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">24.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">31.0%</td>
+<td class="num">48.0%</td>
+<td class="num">0.150</td>
+<td class="num">0.0%</td>
+<td class="num">50.0%</td>
+<td class="num">32.0%</td>
+<td class="num">29.0%</td>
+<td class="num">27.0%</td>
+<td class="num">32.0%</td>
+<td class="num">3.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">35.0%</td>
+<td class="num">48.0%</td>
+<td class="num">0.127</td>
+<td class="num">0.0%</td>
+<td class="num">52.6%</td>
+<td class="num">28.0%</td>
+<td class="num">28.0%</td>
+<td class="num">28.0%</td>
+<td class="num">35.0%</td>
+<td class="num">3.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">35.0%</td>
+<td class="num">44.0%</td>
+<td class="num">0.124</td>
+<td class="num">0.0%</td>
+<td class="num">43.8%</td>
+<td class="num">30.0%</td>
+<td class="num">27.0%</td>
+<td class="num">18.0%</td>
+<td class="num">26.0%</td>
+<td class="num">4.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">27.0%</td>
+<td class="num">41.0%</td>
+<td class="num">0.187</td>
+<td class="num">0.0%</td>
+<td class="num">25.0%</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">25.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">28.0%</td>
+<td class="num">48.0%</td>
+<td class="num">0.277</td>
+<td class="num">0.0%</td>
+<td class="num">18.6%</td>
+<td class="num">30.0%</td>
+<td class="num">23.0%</td>
+<td class="num">40.0%</td>
+<td class="num">28.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">20.0%</td>
+<td class="num">36.0%</td>
+<td class="num">0.248</td>
+<td class="num">0.0%</td>
+<td class="num">21.9%</td>
+<td class="num">19.0%</td>
+<td class="num">12.0%</td>
+<td class="num">26.0%</td>
+<td class="num">19.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">33.0%</td>
+<td class="num">53.0%</td>
+<td class="num">0.217</td>
+<td class="num">0.0%</td>
+<td class="num">20.5%</td>
+<td class="num">29.0%</td>
+<td class="num">23.0%</td>
+<td class="num">46.0%</td>
+<td class="num">29.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">20.0%</td>
+<td class="num">39.0%</td>
+<td class="num">0.167</td>
+<td class="num">0.0%</td>
+<td class="num">37.5%</td>
+<td class="num">9.0%</td>
+<td class="num">7.0%</td>
+<td class="num">28.0%</td>
+<td class="num">11.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">16.0%</td>
+<td class="num">43.0%</td>
+<td class="num">0.044</td>
+<td class="num">0.0%</td>
+<td class="num">51.5%</td>
+<td class="num">7.0%</td>
+<td class="num">2.0%</td>
+<td class="num">36.0%</td>
+<td class="num">8.0%</td>
+<td class="num">6.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">26.0%</td>
+<td class="num">41.0%</td>
+<td class="num">0.180</td>
+<td class="num">0.0%</td>
+<td class="num">30.3%</td>
+<td class="num">21.0%</td>
+<td class="num">17.0%</td>
+<td class="num">31.0%</td>
+<td class="num">21.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">15.3%</td>
+<td class="num">56.1%</td>
+<td class="num">0.121</td>
+<td class="num">0.0%</td>
+<td class="num">43.6%</td>
+<td class="num">17.3%</td>
+<td class="num">17.3%</td>
+<td class="num">42.9%</td>
+<td class="num">18.4%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">16.3%</td>
+<td class="num">50.0%</td>
+<td class="num">0.121</td>
+<td class="num">0.0%</td>
+<td class="num">30.3%</td>
+<td class="num">11.2%</td>
+<td class="num">14.3%</td>
+<td class="num">34.7%</td>
+<td class="num">17.3%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">12.2%</td>
+<td class="num">51.0%</td>
+<td class="num">0.168</td>
+<td class="num">0.0%</td>
+<td class="num">27.3%</td>
+<td class="num">12.2%</td>
+<td class="num">16.3%</td>
+<td class="num">39.8%</td>
+<td class="num">15.3%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">9.2%</td>
+<td class="num">40.8%</td>
+<td class="num">0.160</td>
+<td class="num">0.0%</td>
+<td class="num">26.9%</td>
+<td class="num">12.2%</td>
+<td class="num">8.2%</td>
+<td class="num">26.5%</td>
+<td class="num">5.1%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">17.3%</td>
+<td class="num">53.1%</td>
+<td class="num">0.097</td>
+<td class="num">0.0%</td>
+<td class="num">41.9%</td>
+<td class="num">16.3%</td>
+<td class="num">14.3%</td>
+<td class="num">41.8%</td>
+<td class="num">14.3%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">18.4%</td>
+<td class="num">43.9%</td>
+<td class="num">0.135</td>
+<td class="num">0.0%</td>
+<td class="num">42.3%</td>
+<td class="num">6.1%</td>
+<td class="num">5.1%</td>
+<td class="num">39.8%</td>
+<td class="num">7.1%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">7.1%</td>
+<td class="num">39.8%</td>
+<td class="num">0.100</td>
+<td class="num">0.0%</td>
+<td class="num">50.0%</td>
+<td class="num">11.2%</td>
+<td class="num">4.1%</td>
+<td class="num">35.7%</td>
+<td class="num">8.2%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">12.2%</td>
+<td class="num">55.1%</td>
+<td class="num">0.101</td>
+<td class="num">0.0%</td>
+<td class="num">29.2%</td>
+<td class="num">7.1%</td>
+<td class="num">8.2%</td>
+<td class="num">46.9%</td>
+<td class="num">8.2%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">5.1%</td>
+<td class="num">57.1%</td>
+<td class="num">0.058</td>
+<td class="num">0.0%</td>
+<td class="num">71.4%</td>
+<td class="num">4.1%</td>
+<td class="num">5.1%</td>
+<td class="num">53.1%</td>
+<td class="num">4.1%</td>
+<td class="num">5.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">80.6%</td>
+<td class="num">0.005</td>
+<td class="num">0.0%</td>
+<td class="num">57.1%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">79.6%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">15.3%</td>
+<td class="num">63.3%</td>
+<td class="num">0.091</td>
+<td class="num">0.0%</td>
+<td class="num">55.3%</td>
+<td class="num">22.4%</td>
+<td class="num">15.3%</td>
+<td class="num">49.0%</td>
+<td class="num">24.5%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">33.0%</td>
+<td class="num">45.0%</td>
+<td class="num">0.202</td>
+<td class="num">0.0%</td>
+<td class="num">27.0%</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">24.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">30.0%</td>
+<td class="num">51.0%</td>
+<td class="num">0.105</td>
+<td class="num">0.0%</td>
+<td class="num">56.4%</td>
+<td class="num">31.0%</td>
+<td class="num">30.0%</td>
+<td class="num">30.0%</td>
+<td class="num">30.0%</td>
+<td class="num">5.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">32.0%</td>
+<td class="num">53.0%</td>
+<td class="num">0.160</td>
+<td class="num">0.0%</td>
+<td class="num">50.0%</td>
+<td class="num">31.0%</td>
+<td class="num">32.0%</td>
+<td class="num">28.0%</td>
+<td class="num">30.0%</td>
+<td class="num">6.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">33.0%</td>
+<td class="num">57.0%</td>
+<td class="num">0.143</td>
+<td class="num">0.0%</td>
+<td class="num">39.1%</td>
+<td class="num">32.0%</td>
+<td class="num">30.0%</td>
+<td class="num">35.0%</td>
+<td class="num">23.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">30.0%</td>
+<td class="num">50.0%</td>
+<td class="num">0.233</td>
+<td class="num">0.0%</td>
+<td class="num">34.1%</td>
+<td class="num">24.0%</td>
+<td class="num">20.0%</td>
+<td class="num">33.0%</td>
+<td class="num">30.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">20.0%</td>
+<td class="num">44.0%</td>
+<td class="num">0.227</td>
+<td class="num">0.0%</td>
+<td class="num">26.8%</td>
+<td class="num">20.0%</td>
+<td class="num">14.0%</td>
+<td class="num">37.0%</td>
+<td class="num">20.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">17.0%</td>
+<td class="num">31.0%</td>
+<td class="num">0.182</td>
+<td class="num">0.0%</td>
+<td class="num">40.7%</td>
+<td class="num">15.0%</td>
+<td class="num">10.0%</td>
+<td class="num">19.0%</td>
+<td class="num">14.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">40.0%</td>
+<td class="num">56.0%</td>
+<td class="num">0.160</td>
+<td class="num">0.0%</td>
+<td class="num">34.1%</td>
+<td class="num">30.0%</td>
+<td class="num">25.0%</td>
+<td class="num">40.0%</td>
+<td class="num">30.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">21.0%</td>
+<td class="num">54.0%</td>
+<td class="num">0.107</td>
+<td class="num">0.0%</td>
+<td class="num">55.9%</td>
+<td class="num">13.0%</td>
+<td class="num">11.0%</td>
+<td class="num">44.0%</td>
+<td class="num">11.0%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">6.0%</td>
+<td class="num">67.0%</td>
+<td class="num">0.072</td>
+<td class="num">0.0%</td>
+<td class="num">58.8%</td>
+<td class="num">6.0%</td>
+<td class="num">5.0%</td>
+<td class="num">60.0%</td>
+<td class="num">5.0%</td>
+<td class="num">3.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">32.0%</td>
+<td class="num">44.0%</td>
+<td class="num">0.201</td>
+<td class="num">0.0%</td>
+<td class="num">36.1%</td>
+<td class="num">26.0%</td>
+<td class="num">21.0%</td>
+<td class="num">30.0%</td>
+<td class="num">25.0%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.001</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">95.9%</td>
+<td class="num">7.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">8.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">13.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">90.8%</td>
+<td class="num">99.0%</td>
+<td class="num">90.8%</td>
+<td class="num">6.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">96.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.9%</td>
+<td class="num">100.0%</td>
+<td class="num">96.9%</td>
+<td class="num">93.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">7.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.9%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">7.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">95.9%</td>
+<td class="num">10.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">93.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">91.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">70.4%</td>
+<td class="num">100.0%</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">78.6%</td>
+<td class="num">25.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">56.1%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">0.0%</td>
+<td class="num">97.8%</td>
+<td class="num">44.9%</td>
+<td class="num">26.5%</td>
+<td class="num">100.0%</td>
+<td class="num">22.4%</td>
+<td class="num">51.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">93.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">91.8%</td>
+<td class="num">100.0%</td>
+<td class="num">93.9%</td>
+<td class="num">2.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">97.0%</td>
+<td class="num">19.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">88.0%</td>
+<td class="num">100.0%</td>
+<td class="num">95.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">11.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">91.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">95.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">19.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">20.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">89.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">21.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">0.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">93.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">15.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">0.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">18.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">0.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">93.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">16.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">0.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">59.0%</td>
+<td class="num">100.0%</td>
+<td class="num">84.0%</td>
+<td class="num">74.0%</td>
+<td class="num">100.0%</td>
+<td class="num">65.0%</td>
+<td class="num">32.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">79.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">0.0%</td>
+<td class="num">n/a</td>
+<td class="num">49.0%</td>
+<td class="num">32.0%</td>
+<td class="num">100.0%</td>
+<td class="num">17.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">0.0%</td>
+<td class="num">99.0%</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">94.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.001</td>
+<td class="num">94.9%</td>
+<td class="num">98.7%</td>
+<td class="num">93.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">94.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">94.9%</td>
+<td class="num">98.6%</td>
+<td class="num">92.9%</td>
+<td class="num">85.7%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">5.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">94.9%</td>
+<td class="num">96.9%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">86.7%</td>
+<td class="num">100.0%</td>
+<td class="num">87.8%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">92.9%</td>
+<td class="num">89.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">90.8%</td>
+<td class="num">88.8%</td>
+<td class="num">100.0%</td>
+<td class="num">89.8%</td>
+<td class="num">4.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">95.9%</td>
+<td class="num">91.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">90.8%</td>
+<td class="num">87.8%</td>
+<td class="num">99.0%</td>
+<td class="num">92.9%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">95.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">95.9%</td>
+<td class="num">98.6%</td>
+<td class="num">93.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">3.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">94.9%</td>
+<td class="num">92.9%</td>
+<td class="num">99.0%</td>
+<td class="num">0.000</td>
+<td class="num">95.9%</td>
+<td class="num">98.8%</td>
+<td class="num">91.8%</td>
+<td class="num">85.7%</td>
+<td class="num">99.0%</td>
+<td class="num">90.8%</td>
+<td class="num">5.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">94.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.003</td>
+<td class="num">94.9%</td>
+<td class="num">98.9%</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">94.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.003</td>
+<td class="num">94.9%</td>
+<td class="num">98.9%</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">94.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">0.003</td>
+<td class="num">94.9%</td>
+<td class="num">98.9%</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">1.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">96.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">95.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">11.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">12.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">93.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">93.0%</td>
+<td class="num">100.0%</td>
+<td class="num">97.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">16.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">90.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">90.0%</td>
+<td class="num">100.0%</td>
+<td class="num">97.0%</td>
+<td class="num">94.0%</td>
+<td class="num">99.0%</td>
+<td class="num">96.0%</td>
+<td class="num">13.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">15.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">12.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">97.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">13.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">20.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">20.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">100.0%</td>
+<td class="num">0.000</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">20.0%</td>
+</tr>
+</tbody></table>
+<h2>Pathway Label Parent Rates</h2>
+<table>
+<thead><tr>
+<th>model</th>
+<th>dataset</th>
+<th>condition</th>
+<th class="num">Risk acknowledgment</th>
+<th class="num">Policy awareness</th>
+<th class="num">Intent assessment</th>
+<th class="num">Refusal initiation</th>
+<th class="num">Refusal maintenance</th>
+<th class="num">Refusal suppression</th>
+<th class="num">Benign motive invention</th>
+<th class="num">Educational framing</th>
+<th class="num">Legal disclaimer laundering</th>
+<th class="num">Task decomposition</th>
+<th class="num">Procedural planning</th>
+<th class="num">Operational detail</th>
+</tr></thead><tbody>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">70.4%</td>
+<td class="num">56.1%</td>
+<td class="num">12.2%</td>
+<td class="num">82.7%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">5.1%</td>
+<td class="num">12.2%</td>
+<td class="num">31.6%</td>
+<td class="num">31.6%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">48.0%</td>
+<td class="num">40.8%</td>
+<td class="num">22.4%</td>
+<td class="num">53.1%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.1%</td>
+<td class="num">4.1%</td>
+<td class="num">17.3%</td>
+<td class="num">45.9%</td>
+<td class="num">46.9%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">32.7%</td>
+<td class="num">35.7%</td>
+<td class="num">37.8%</td>
+<td class="num">43.9%</td>
+<td class="num">4.1%</td>
+<td class="num">3.1%</td>
+<td class="num">1.0%</td>
+<td class="num">7.1%</td>
+<td class="num">3.1%</td>
+<td class="num">13.3%</td>
+<td class="num">52.0%</td>
+<td class="num">54.1%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">31.6%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">5.1%</td>
+<td class="num">74.5%</td>
+<td class="num">79.6%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">74.5%</td>
+<td class="num">56.1%</td>
+<td class="num">19.4%</td>
+<td class="num">87.8%</td>
+<td class="num">5.1%</td>
+<td class="num">0.0%</td>
+<td class="num">2.0%</td>
+<td class="num">5.1%</td>
+<td class="num">6.1%</td>
+<td class="num">15.3%</td>
+<td class="num">38.8%</td>
+<td class="num">39.8%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">69.4%</td>
+<td class="num">53.1%</td>
+<td class="num">15.3%</td>
+<td class="num">82.7%</td>
+<td class="num">9.2%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">8.2%</td>
+<td class="num">8.2%</td>
+<td class="num">13.3%</td>
+<td class="num">53.1%</td>
+<td class="num">53.1%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">72.4%</td>
+<td class="num">59.2%</td>
+<td class="num">37.8%</td>
+<td class="num">75.5%</td>
+<td class="num">18.4%</td>
+<td class="num">8.2%</td>
+<td class="num">8.2%</td>
+<td class="num">21.4%</td>
+<td class="num">17.3%</td>
+<td class="num">22.4%</td>
+<td class="num">84.7%</td>
+<td class="num">84.7%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">6.1%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">8.2%</td>
+<td class="num">7.1%</td>
+<td class="num">16.3%</td>
+<td class="num">58.2%</td>
+<td class="num">59.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">6.1%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">8.2%</td>
+<td class="num">7.1%</td>
+<td class="num">16.3%</td>
+<td class="num">58.2%</td>
+<td class="num">59.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">66.3%</td>
+<td class="num">40.8%</td>
+<td class="num">16.3%</td>
+<td class="num">73.5%</td>
+<td class="num">6.1%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">8.2%</td>
+<td class="num">7.1%</td>
+<td class="num">16.3%</td>
+<td class="num">58.2%</td>
+<td class="num">59.2%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">42.0%</td>
+<td class="num">54.0%</td>
+<td class="num">0.0%</td>
+<td class="num">96.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">3.0%</td>
+<td class="num">5.0%</td>
+<td class="num">4.0%</td>
+<td class="num">9.0%</td>
+<td class="num">9.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">56.0%</td>
+<td class="num">52.0%</td>
+<td class="num">10.0%</td>
+<td class="num">85.0%</td>
+<td class="num">4.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">5.0%</td>
+<td class="num">2.0%</td>
+<td class="num">10.0%</td>
+<td class="num">32.0%</td>
+<td class="num">32.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">37.0%</td>
+<td class="num">43.0%</td>
+<td class="num">26.0%</td>
+<td class="num">66.0%</td>
+<td class="num">6.0%</td>
+<td class="num">4.0%</td>
+<td class="num">2.0%</td>
+<td class="num">21.0%</td>
+<td class="num">11.0%</td>
+<td class="num">21.0%</td>
+<td class="num">55.0%</td>
+<td class="num">58.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">28.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.0%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">9.0%</td>
+<td class="num">63.0%</td>
+<td class="num">72.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">52.0%</td>
+<td class="num">61.0%</td>
+<td class="num">15.0%</td>
+<td class="num">90.0%</td>
+<td class="num">16.0%</td>
+<td class="num">1.0%</td>
+<td class="num">4.0%</td>
+<td class="num">7.0%</td>
+<td class="num">7.0%</td>
+<td class="num">7.0%</td>
+<td class="num">19.0%</td>
+<td class="num">20.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">61.0%</td>
+<td class="num">56.0%</td>
+<td class="num">3.0%</td>
+<td class="num">82.0%</td>
+<td class="num">3.0%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">10.0%</td>
+<td class="num">13.0%</td>
+<td class="num">17.0%</td>
+<td class="num">29.0%</td>
+<td class="num">30.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">71.0%</td>
+<td class="num">55.0%</td>
+<td class="num">23.0%</td>
+<td class="num">54.0%</td>
+<td class="num">13.0%</td>
+<td class="num">8.0%</td>
+<td class="num">2.0%</td>
+<td class="num">37.0%</td>
+<td class="num">41.0%</td>
+<td class="num">18.0%</td>
+<td class="num">72.0%</td>
+<td class="num">74.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">4.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">13.0%</td>
+<td class="num">16.0%</td>
+<td class="num">10.0%</td>
+<td class="num">38.0%</td>
+<td class="num">38.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">4.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">13.0%</td>
+<td class="num">16.0%</td>
+<td class="num">10.0%</td>
+<td class="num">38.0%</td>
+<td class="num">38.0%</td>
+</tr>
+<tr>
+<td>Llama 3.1 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">57.0%</td>
+<td class="num">45.0%</td>
+<td class="num">3.0%</td>
+<td class="num">80.0%</td>
+<td class="num">4.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">13.0%</td>
+<td class="num">16.0%</td>
+<td class="num">10.0%</td>
+<td class="num">38.0%</td>
+<td class="num">38.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">16.3%</td>
+<td class="num">17.3%</td>
+<td class="num">42.9%</td>
+<td class="num">18.4%</td>
+<td class="num">10.2%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">19.4%</td>
+<td class="num">68.4%</td>
+<td class="num">76.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">10.2%</td>
+<td class="num">9.2%</td>
+<td class="num">38.8%</td>
+<td class="num">9.2%</td>
+<td class="num">8.2%</td>
+<td class="num">3.1%</td>
+<td class="num">1.0%</td>
+<td class="num">5.1%</td>
+<td class="num">4.1%</td>
+<td class="num">14.3%</td>
+<td class="num">64.3%</td>
+<td class="num">70.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">8.2%</td>
+<td class="num">7.1%</td>
+<td class="num">35.7%</td>
+<td class="num">6.1%</td>
+<td class="num">7.1%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">15.3%</td>
+<td class="num">65.3%</td>
+<td class="num">69.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">9.2%</td>
+<td class="num">11.2%</td>
+<td class="num">26.5%</td>
+<td class="num">12.2%</td>
+<td class="num">10.2%</td>
+<td class="num">3.1%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">15.3%</td>
+<td class="num">71.4%</td>
+<td class="num">77.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">18.4%</td>
+<td class="num">14.3%</td>
+<td class="num">43.9%</td>
+<td class="num">15.3%</td>
+<td class="num">12.2%</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">23.5%</td>
+<td class="num">61.2%</td>
+<td class="num">69.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">17.3%</td>
+<td class="num">12.2%</td>
+<td class="num">38.8%</td>
+<td class="num">12.2%</td>
+<td class="num">5.1%</td>
+<td class="num">3.1%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">28.6%</td>
+<td class="num">57.1%</td>
+<td class="num">64.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">13.3%</td>
+<td class="num">15.3%</td>
+<td class="num">48.0%</td>
+<td class="num">15.3%</td>
+<td class="num">9.2%</td>
+<td class="num">4.1%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">2.0%</td>
+<td class="num">29.6%</td>
+<td class="num">57.1%</td>
+<td class="num">62.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">17.3%</td>
+<td class="num">13.3%</td>
+<td class="num">40.8%</td>
+<td class="num">14.3%</td>
+<td class="num">10.2%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">5.1%</td>
+<td class="num">2.0%</td>
+<td class="num">16.3%</td>
+<td class="num">71.4%</td>
+<td class="num">76.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">10.2%</td>
+<td class="num">7.1%</td>
+<td class="num">50.0%</td>
+<td class="num">7.1%</td>
+<td class="num">9.2%</td>
+<td class="num">4.1%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">17.3%</td>
+<td class="num">57.1%</td>
+<td class="num">68.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">3.1%</td>
+<td class="num">3.1%</td>
+<td class="num">49.0%</td>
+<td class="num">3.1%</td>
+<td class="num">5.1%</td>
+<td class="num">4.1%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">8.2%</td>
+<td class="num">49.0%</td>
+<td class="num">61.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">20.4%</td>
+<td class="num">16.3%</td>
+<td class="num">35.7%</td>
+<td class="num">14.3%</td>
+<td class="num">11.2%</td>
+<td class="num">3.1%</td>
+<td class="num">0.0%</td>
+<td class="num">2.0%</td>
+<td class="num">3.1%</td>
+<td class="num">21.4%</td>
+<td class="num">70.4%</td>
+<td class="num">81.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">24.0%</td>
+<td class="num">18.0%</td>
+<td class="num">2.0%</td>
+<td class="num">6.0%</td>
+<td class="num">4.0%</td>
+<td class="num">1.0%</td>
+<td class="num">48.0%</td>
+<td class="num">72.0%</td>
+<td class="num">73.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">32.0%</td>
+<td class="num">29.0%</td>
+<td class="num">27.0%</td>
+<td class="num">32.0%</td>
+<td class="num">18.0%</td>
+<td class="num">3.0%</td>
+<td class="num">9.0%</td>
+<td class="num">10.0%</td>
+<td class="num">10.0%</td>
+<td class="num">49.0%</td>
+<td class="num">87.0%</td>
+<td class="num">86.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">28.0%</td>
+<td class="num">28.0%</td>
+<td class="num">28.0%</td>
+<td class="num">35.0%</td>
+<td class="num">21.0%</td>
+<td class="num">3.0%</td>
+<td class="num">8.0%</td>
+<td class="num">7.0%</td>
+<td class="num">6.0%</td>
+<td class="num">47.0%</td>
+<td class="num">85.0%</td>
+<td class="num">84.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">30.0%</td>
+<td class="num">27.0%</td>
+<td class="num">18.0%</td>
+<td class="num">26.0%</td>
+<td class="num">16.0%</td>
+<td class="num">4.0%</td>
+<td class="num">5.0%</td>
+<td class="num">8.0%</td>
+<td class="num">5.0%</td>
+<td class="num">37.0%</td>
+<td class="num">80.0%</td>
+<td class="num">81.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">25.0%</td>
+<td class="num">9.0%</td>
+<td class="num">0.0%</td>
+<td class="num">3.0%</td>
+<td class="num">3.0%</td>
+<td class="num">1.0%</td>
+<td class="num">67.0%</td>
+<td class="num">62.0%</td>
+<td class="num">68.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">30.0%</td>
+<td class="num">23.0%</td>
+<td class="num">40.0%</td>
+<td class="num">28.0%</td>
+<td class="num">9.0%</td>
+<td class="num">0.0%</td>
+<td class="num">4.0%</td>
+<td class="num">4.0%</td>
+<td class="num">2.0%</td>
+<td class="num">68.0%</td>
+<td class="num">57.0%</td>
+<td class="num">62.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">19.0%</td>
+<td class="num">12.0%</td>
+<td class="num">26.0%</td>
+<td class="num">19.0%</td>
+<td class="num">6.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.0%</td>
+<td class="num">3.0%</td>
+<td class="num">66.0%</td>
+<td class="num">55.0%</td>
+<td class="num">60.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">29.0%</td>
+<td class="num">23.0%</td>
+<td class="num">46.0%</td>
+<td class="num">29.0%</td>
+<td class="num">17.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.0%</td>
+<td class="num">7.0%</td>
+<td class="num">6.0%</td>
+<td class="num">54.0%</td>
+<td class="num">75.0%</td>
+<td class="num">76.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">9.0%</td>
+<td class="num">7.0%</td>
+<td class="num">28.0%</td>
+<td class="num">11.0%</td>
+<td class="num">5.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">4.0%</td>
+<td class="num">2.0%</td>
+<td class="num">42.0%</td>
+<td class="num">79.0%</td>
+<td class="num">84.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">7.0%</td>
+<td class="num">2.0%</td>
+<td class="num">36.0%</td>
+<td class="num">8.0%</td>
+<td class="num">5.0%</td>
+<td class="num">6.0%</td>
+<td class="num">0.0%</td>
+<td class="num">3.0%</td>
+<td class="num">1.0%</td>
+<td class="num">32.0%</td>
+<td class="num">81.0%</td>
+<td class="num">81.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">21.0%</td>
+<td class="num">17.0%</td>
+<td class="num">31.0%</td>
+<td class="num">21.0%</td>
+<td class="num">9.0%</td>
+<td class="num">0.0%</td>
+<td class="num">5.0%</td>
+<td class="num">3.0%</td>
+<td class="num">2.0%</td>
+<td class="num">51.0%</td>
+<td class="num">67.0%</td>
+<td class="num">70.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">17.3%</td>
+<td class="num">17.3%</td>
+<td class="num">42.9%</td>
+<td class="num">18.4%</td>
+<td class="num">10.2%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">19.4%</td>
+<td class="num">68.4%</td>
+<td class="num">76.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">11.2%</td>
+<td class="num">14.3%</td>
+<td class="num">34.7%</td>
+<td class="num">17.3%</td>
+<td class="num">13.3%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.1%</td>
+<td class="num">3.1%</td>
+<td class="num">22.4%</td>
+<td class="num">70.4%</td>
+<td class="num">75.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">12.2%</td>
+<td class="num">16.3%</td>
+<td class="num">39.8%</td>
+<td class="num">15.3%</td>
+<td class="num">9.2%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">19.4%</td>
+<td class="num">72.4%</td>
+<td class="num">76.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">12.2%</td>
+<td class="num">8.2%</td>
+<td class="num">26.5%</td>
+<td class="num">5.1%</td>
+<td class="num">9.2%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">20.4%</td>
+<td class="num">76.5%</td>
+<td class="num">83.7%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">16.3%</td>
+<td class="num">14.3%</td>
+<td class="num">41.8%</td>
+<td class="num">14.3%</td>
+<td class="num">11.2%</td>
+<td class="num">0.0%</td>
+<td class="num">3.1%</td>
+<td class="num">4.1%</td>
+<td class="num">3.1%</td>
+<td class="num">29.6%</td>
+<td class="num">61.2%</td>
+<td class="num">66.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">6.1%</td>
+<td class="num">5.1%</td>
+<td class="num">39.8%</td>
+<td class="num">7.1%</td>
+<td class="num">4.1%</td>
+<td class="num">1.0%</td>
+<td class="num">4.1%</td>
+<td class="num">3.1%</td>
+<td class="num">2.0%</td>
+<td class="num">32.7%</td>
+<td class="num">52.0%</td>
+<td class="num">62.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">11.2%</td>
+<td class="num">4.1%</td>
+<td class="num">35.7%</td>
+<td class="num">8.2%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">32.7%</td>
+<td class="num">55.1%</td>
+<td class="num">68.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">7.1%</td>
+<td class="num">8.2%</td>
+<td class="num">46.9%</td>
+<td class="num">8.2%</td>
+<td class="num">8.2%</td>
+<td class="num">2.0%</td>
+<td class="num">2.0%</td>
+<td class="num">4.1%</td>
+<td class="num">2.0%</td>
+<td class="num">13.3%</td>
+<td class="num">50.0%</td>
+<td class="num">62.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">4.1%</td>
+<td class="num">5.1%</td>
+<td class="num">53.1%</td>
+<td class="num">4.1%</td>
+<td class="num">4.1%</td>
+<td class="num">5.1%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">4.1%</td>
+<td class="num">30.6%</td>
+<td class="num">40.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">79.6%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">0.0%</td>
+<td class="num">1.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">9.2%</td>
+<td class="num">12.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">22.4%</td>
+<td class="num">15.3%</td>
+<td class="num">49.0%</td>
+<td class="num">24.5%</td>
+<td class="num">10.2%</td>
+<td class="num">3.1%</td>
+<td class="num">9.2%</td>
+<td class="num">8.2%</td>
+<td class="num">5.1%</td>
+<td class="num">28.6%</td>
+<td class="num">71.4%</td>
+<td class="num">77.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">25.0%</td>
+<td class="num">19.0%</td>
+<td class="num">31.0%</td>
+<td class="num">24.0%</td>
+<td class="num">18.0%</td>
+<td class="num">2.0%</td>
+<td class="num">6.0%</td>
+<td class="num">4.0%</td>
+<td class="num">1.0%</td>
+<td class="num">48.0%</td>
+<td class="num">72.0%</td>
+<td class="num">73.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">31.0%</td>
+<td class="num">30.0%</td>
+<td class="num">30.0%</td>
+<td class="num">30.0%</td>
+<td class="num">21.0%</td>
+<td class="num">5.0%</td>
+<td class="num">9.0%</td>
+<td class="num">11.0%</td>
+<td class="num">8.0%</td>
+<td class="num">51.0%</td>
+<td class="num">82.0%</td>
+<td class="num">82.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">31.0%</td>
+<td class="num">32.0%</td>
+<td class="num">28.0%</td>
+<td class="num">30.0%</td>
+<td class="num">17.0%</td>
+<td class="num">6.0%</td>
+<td class="num">8.0%</td>
+<td class="num">13.0%</td>
+<td class="num">12.0%</td>
+<td class="num">50.0%</td>
+<td class="num">83.0%</td>
+<td class="num">83.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">32.0%</td>
+<td class="num">30.0%</td>
+<td class="num">35.0%</td>
+<td class="num">23.0%</td>
+<td class="num">17.0%</td>
+<td class="num">2.0%</td>
+<td class="num">4.0%</td>
+<td class="num">10.0%</td>
+<td class="num">8.0%</td>
+<td class="num">42.0%</td>
+<td class="num">83.0%</td>
+<td class="num">83.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">24.0%</td>
+<td class="num">20.0%</td>
+<td class="num">33.0%</td>
+<td class="num">30.0%</td>
+<td class="num">18.0%</td>
+<td class="num">1.0%</td>
+<td class="num">9.0%</td>
+<td class="num">7.0%</td>
+<td class="num">4.0%</td>
+<td class="num">59.0%</td>
+<td class="num">72.0%</td>
+<td class="num">76.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">20.0%</td>
+<td class="num">14.0%</td>
+<td class="num">37.0%</td>
+<td class="num">20.0%</td>
+<td class="num">8.0%</td>
+<td class="num">1.0%</td>
+<td class="num">2.0%</td>
+<td class="num">4.0%</td>
+<td class="num">4.0%</td>
+<td class="num">74.0%</td>
+<td class="num">65.0%</td>
+<td class="num">71.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">15.0%</td>
+<td class="num">10.0%</td>
+<td class="num">19.0%</td>
+<td class="num">14.0%</td>
+<td class="num">4.0%</td>
+<td class="num">1.0%</td>
+<td class="num">1.0%</td>
+<td class="num">3.0%</td>
+<td class="num">2.0%</td>
+<td class="num">58.0%</td>
+<td class="num">58.0%</td>
+<td class="num">60.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">30.0%</td>
+<td class="num">25.0%</td>
+<td class="num">40.0%</td>
+<td class="num">30.0%</td>
+<td class="num">20.0%</td>
+<td class="num">1.0%</td>
+<td class="num">6.0%</td>
+<td class="num">4.0%</td>
+<td class="num">5.0%</td>
+<td class="num">40.0%</td>
+<td class="num">73.0%</td>
+<td class="num">78.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">13.0%</td>
+<td class="num">11.0%</td>
+<td class="num">44.0%</td>
+<td class="num">11.0%</td>
+<td class="num">12.0%</td>
+<td class="num">2.0%</td>
+<td class="num">5.0%</td>
+<td class="num">3.0%</td>
+<td class="num">4.0%</td>
+<td class="num">27.0%</td>
+<td class="num">68.0%</td>
+<td class="num">70.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">6.0%</td>
+<td class="num">5.0%</td>
+<td class="num">60.0%</td>
+<td class="num">5.0%</td>
+<td class="num">5.0%</td>
+<td class="num">3.0%</td>
+<td class="num">1.0%</td>
+<td class="num">6.0%</td>
+<td class="num">2.0%</td>
+<td class="num">20.0%</td>
+<td class="num">41.0%</td>
+<td class="num">48.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Base Own</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">26.0%</td>
+<td class="num">21.0%</td>
+<td class="num">30.0%</td>
+<td class="num">25.0%</td>
+<td class="num">14.0%</td>
+<td class="num">1.0%</td>
+<td class="num">5.0%</td>
+<td class="num">4.0%</td>
+<td class="num">3.0%</td>
+<td class="num">52.0%</td>
+<td class="num">67.0%</td>
+<td class="num">72.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">94.9%</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">95.9%</td>
+<td class="num">82.7%</td>
+<td class="num">7.1%</td>
+<td class="num">73.5%</td>
+<td class="num">50.0%</td>
+<td class="num">46.9%</td>
+<td class="num">92.9%</td>
+<td class="num">57.1%</td>
+<td class="num">69.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">94.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">77.6%</td>
+<td class="num">8.2%</td>
+<td class="num">65.3%</td>
+<td class="num">37.8%</td>
+<td class="num">49.0%</td>
+<td class="num">88.8%</td>
+<td class="num">58.2%</td>
+<td class="num">65.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">92.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">81.6%</td>
+<td class="num">13.3%</td>
+<td class="num">56.1%</td>
+<td class="num">55.1%</td>
+<td class="num">59.2%</td>
+<td class="num">93.9%</td>
+<td class="num">56.1%</td>
+<td class="num">69.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">94.9%</td>
+<td class="num">90.8%</td>
+<td class="num">99.0%</td>
+<td class="num">90.8%</td>
+<td class="num">74.5%</td>
+<td class="num">6.1%</td>
+<td class="num">54.1%</td>
+<td class="num">41.8%</td>
+<td class="num">43.9%</td>
+<td class="num">90.8%</td>
+<td class="num">57.1%</td>
+<td class="num">61.2%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">96.9%</td>
+<td class="num">93.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">75.5%</td>
+<td class="num">7.1%</td>
+<td class="num">63.3%</td>
+<td class="num">39.8%</td>
+<td class="num">40.8%</td>
+<td class="num">91.8%</td>
+<td class="num">65.3%</td>
+<td class="num">69.4%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">98.0%</td>
+<td class="num">95.9%</td>
+<td class="num">100.0%</td>
+<td class="num">94.9%</td>
+<td class="num">78.6%</td>
+<td class="num">7.1%</td>
+<td class="num">65.3%</td>
+<td class="num">53.1%</td>
+<td class="num">49.0%</td>
+<td class="num">86.7%</td>
+<td class="num">64.3%</td>
+<td class="num">77.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">99.0%</td>
+<td class="num">94.9%</td>
+<td class="num">100.0%</td>
+<td class="num">95.9%</td>
+<td class="num">80.6%</td>
+<td class="num">10.2%</td>
+<td class="num">70.4%</td>
+<td class="num">49.0%</td>
+<td class="num">36.7%</td>
+<td class="num">90.8%</td>
+<td class="num">69.4%</td>
+<td class="num">80.6%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">93.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">69.4%</td>
+<td class="num">4.1%</td>
+<td class="num">62.2%</td>
+<td class="num">39.8%</td>
+<td class="num">32.7%</td>
+<td class="num">76.5%</td>
+<td class="num">58.2%</td>
+<td class="num">65.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">78.6%</td>
+<td class="num">62.2%</td>
+<td class="num">25.5%</td>
+<td class="num">64.3%</td>
+<td class="num">38.8%</td>
+<td class="num">31.6%</td>
+<td class="num">54.1%</td>
+<td class="num">64.3%</td>
+<td class="num">65.3%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">44.9%</td>
+<td class="num">26.5%</td>
+<td class="num">100.0%</td>
+<td class="num">22.4%</td>
+<td class="num">22.4%</td>
+<td class="num">51.0%</td>
+<td class="num">16.3%</td>
+<td class="num">39.8%</td>
+<td class="num">28.6%</td>
+<td class="num">55.1%</td>
+<td class="num">85.7%</td>
+<td class="num">90.8%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>BT</td>
+<td>Steering Ablate</td>
+<td class="num">92.9%</td>
+<td class="num">91.8%</td>
+<td class="num">100.0%</td>
+<td class="num">93.9%</td>
+<td class="num">74.5%</td>
+<td class="num">2.0%</td>
+<td class="num">68.4%</td>
+<td class="num">39.8%</td>
+<td class="num">30.6%</td>
+<td class="num">88.8%</td>
+<td class="num">69.4%</td>
+<td class="num">76.5%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">99.0%</td>
+<td class="num">99.0%</td>
+<td class="num">100.0%</td>
+<td class="num">97.0%</td>
+<td class="num">90.0%</td>
+<td class="num">19.0%</td>
+<td class="num">90.0%</td>
+<td class="num">64.0%</td>
+<td class="num">65.0%</td>
+<td class="num">92.0%</td>
+<td class="num">65.0%</td>
+<td class="num">69.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">95.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">87.0%</td>
+<td class="num">11.0%</td>
+<td class="num">84.0%</td>
+<td class="num">63.0%</td>
+<td class="num">75.0%</td>
+<td class="num">94.0%</td>
+<td class="num">65.0%</td>
+<td class="num">72.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">99.0%</td>
+<td class="num">95.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">90.0%</td>
+<td class="num">19.0%</td>
+<td class="num">81.0%</td>
+<td class="num">66.0%</td>
+<td class="num">68.0%</td>
+<td class="num">99.0%</td>
+<td class="num">54.0%</td>
+<td class="num">69.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">99.0%</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">92.0%</td>
+<td class="num">20.0%</td>
+<td class="num">76.0%</td>
+<td class="num">58.0%</td>
+<td class="num">62.0%</td>
+<td class="num">94.0%</td>
+<td class="num">51.0%</td>
+<td class="num">63.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">98.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">88.0%</td>
+<td class="num">21.0%</td>
+<td class="num">85.0%</td>
+<td class="num">71.0%</td>
+<td class="num">69.0%</td>
+<td class="num">93.0%</td>
+<td class="num">67.0%</td>
+<td class="num">79.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">99.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">84.0%</td>
+<td class="num">15.0%</td>
+<td class="num">85.0%</td>
+<td class="num">72.0%</td>
+<td class="num">66.0%</td>
+<td class="num">94.0%</td>
+<td class="num">63.0%</td>
+<td class="num">74.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">99.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">91.0%</td>
+<td class="num">18.0%</td>
+<td class="num">93.0%</td>
+<td class="num">73.0%</td>
+<td class="num">70.0%</td>
+<td class="num">94.0%</td>
+<td class="num">71.0%</td>
+<td class="num">81.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">96.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">76.0%</td>
+<td class="num">16.0%</td>
+<td class="num">86.0%</td>
+<td class="num">56.0%</td>
+<td class="num">53.0%</td>
+<td class="num">88.0%</td>
+<td class="num">66.0%</td>
+<td class="num">71.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">84.0%</td>
+<td class="num">74.0%</td>
+<td class="num">100.0%</td>
+<td class="num">65.0%</td>
+<td class="num">55.0%</td>
+<td class="num">32.0%</td>
+<td class="num">68.0%</td>
+<td class="num">73.0%</td>
+<td class="num">65.0%</td>
+<td class="num">85.0%</td>
+<td class="num">80.0%</td>
+<td class="num">84.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">49.0%</td>
+<td class="num">32.0%</td>
+<td class="num">100.0%</td>
+<td class="num">17.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+<td class="num">0.0%</td>
+</tr>
+<tr>
+<td>Olmo3 7B Think</td>
+<td>JBB</td>
+<td>Steering Ablate</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+<td class="num">n/a</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Baseline</td>
+<td class="num">93.9%</td>
+<td class="num">92.9%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">52.0%</td>
+<td class="num">3.1%</td>
+<td class="num">53.1%</td>
+<td class="num">16.3%</td>
+<td class="num">20.4%</td>
+<td class="num">65.3%</td>
+<td class="num">55.1%</td>
+<td class="num">54.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-3</td>
+<td class="num">92.9%</td>
+<td class="num">85.7%</td>
+<td class="num">100.0%</td>
+<td class="num">91.8%</td>
+<td class="num">48.0%</td>
+<td class="num">5.1%</td>
+<td class="num">56.1%</td>
+<td class="num">15.3%</td>
+<td class="num">20.4%</td>
+<td class="num">52.0%</td>
+<td class="num">52.0%</td>
+<td class="num">52.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-5</td>
+<td class="num">92.9%</td>
+<td class="num">86.7%</td>
+<td class="num">100.0%</td>
+<td class="num">87.8%</td>
+<td class="num">49.0%</td>
+<td class="num">4.1%</td>
+<td class="num">56.1%</td>
+<td class="num">22.4%</td>
+<td class="num">26.5%</td>
+<td class="num">66.3%</td>
+<td class="num">54.1%</td>
+<td class="num">56.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>SHIPS top-8</td>
+<td class="num">90.8%</td>
+<td class="num">88.8%</td>
+<td class="num">100.0%</td>
+<td class="num">89.8%</td>
+<td class="num">60.2%</td>
+<td class="num">4.1%</td>
+<td class="num">49.0%</td>
+<td class="num">21.4%</td>
+<td class="num">21.4%</td>
+<td class="num">72.4%</td>
+<td class="num">52.0%</td>
+<td class="num">53.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-256</td>
+<td class="num">90.8%</td>
+<td class="num">87.8%</td>
+<td class="num">99.0%</td>
+<td class="num">92.9%</td>
+<td class="num">36.7%</td>
+<td class="num">0.0%</td>
+<td class="num">55.1%</td>
+<td class="num">18.4%</td>
+<td class="num">21.4%</td>
+<td class="num">65.3%</td>
+<td class="num">52.0%</td>
+<td class="num">54.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-512</td>
+<td class="num">93.9%</td>
+<td class="num">90.8%</td>
+<td class="num">100.0%</td>
+<td class="num">92.9%</td>
+<td class="num">50.0%</td>
+<td class="num">3.1%</td>
+<td class="num">53.1%</td>
+<td class="num">22.4%</td>
+<td class="num">24.5%</td>
+<td class="num">63.3%</td>
+<td class="num">51.0%</td>
+<td class="num">55.1%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Neurons top-1024</td>
+<td class="num">91.8%</td>
+<td class="num">85.7%</td>
+<td class="num">99.0%</td>
+<td class="num">90.8%</td>
+<td class="num">48.0%</td>
+<td class="num">5.1%</td>
+<td class="num">57.1%</td>
+<td class="num">22.4%</td>
+<td class="num">25.5%</td>
+<td class="num">66.3%</td>
+<td class="num">64.3%</td>
+<td class="num">68.4%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a0.5</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">40.8%</td>
+<td class="num">1.0%</td>
+<td class="num">56.1%</td>
+<td class="num">24.5%</td>
+<td class="num">26.5%</td>
+<td class="num">87.8%</td>
+<td class="num">67.3%</td>
+<td class="num">67.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.0</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">40.8%</td>
+<td class="num">1.0%</td>
+<td class="num">56.1%</td>
+<td class="num">24.5%</td>
+<td class="num">26.5%</td>
+<td class="num">87.8%</td>
+<td class="num">67.3%</td>
+<td class="num">67.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>BT</td>
+<td>Steering a1.5</td>
+<td class="num">86.7%</td>
+<td class="num">77.6%</td>
+<td class="num">100.0%</td>
+<td class="num">84.7%</td>
+<td class="num">40.8%</td>
+<td class="num">1.0%</td>
+<td class="num">56.1%</td>
+<td class="num">24.5%</td>
+<td class="num">26.5%</td>
+<td class="num">87.8%</td>
+<td class="num">67.3%</td>
+<td class="num">67.3%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Baseline</td>
+<td class="num">98.0%</td>
+<td class="num">95.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">65.0%</td>
+<td class="num">11.0%</td>
+<td class="num">84.0%</td>
+<td class="num">33.0%</td>
+<td class="num">36.0%</td>
+<td class="num">64.0%</td>
+<td class="num">44.0%</td>
+<td class="num">52.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-3</td>
+<td class="num">98.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">98.0%</td>
+<td class="num">70.0%</td>
+<td class="num">12.0%</td>
+<td class="num">86.0%</td>
+<td class="num">35.0%</td>
+<td class="num">33.0%</td>
+<td class="num">60.0%</td>
+<td class="num">43.0%</td>
+<td class="num">47.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-5</td>
+<td class="num">97.0%</td>
+<td class="num">96.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">65.0%</td>
+<td class="num">16.0%</td>
+<td class="num">89.0%</td>
+<td class="num">40.0%</td>
+<td class="num">43.0%</td>
+<td class="num">67.0%</td>
+<td class="num">48.0%</td>
+<td class="num">56.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>SHIPS top-8</td>
+<td class="num">97.0%</td>
+<td class="num">94.0%</td>
+<td class="num">99.0%</td>
+<td class="num">96.0%</td>
+<td class="num">71.0%</td>
+<td class="num">13.0%</td>
+<td class="num">86.0%</td>
+<td class="num">38.0%</td>
+<td class="num">37.0%</td>
+<td class="num">66.0%</td>
+<td class="num">43.0%</td>
+<td class="num">51.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-256</td>
+<td class="num">98.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">99.0%</td>
+<td class="num">64.0%</td>
+<td class="num">15.0%</td>
+<td class="num">85.0%</td>
+<td class="num">30.0%</td>
+<td class="num">39.0%</td>
+<td class="num">74.0%</td>
+<td class="num">45.0%</td>
+<td class="num">45.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-512</td>
+<td class="num">98.0%</td>
+<td class="num">97.0%</td>
+<td class="num">100.0%</td>
+<td class="num">94.0%</td>
+<td class="num">58.0%</td>
+<td class="num">12.0%</td>
+<td class="num">88.0%</td>
+<td class="num">47.0%</td>
+<td class="num">40.0%</td>
+<td class="num">65.0%</td>
+<td class="num">51.0%</td>
+<td class="num">55.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Neurons top-1024</td>
+<td class="num">97.0%</td>
+<td class="num">98.0%</td>
+<td class="num">100.0%</td>
+<td class="num">96.0%</td>
+<td class="num">66.0%</td>
+<td class="num">13.0%</td>
+<td class="num">87.0%</td>
+<td class="num">37.0%</td>
+<td class="num">38.0%</td>
+<td class="num">76.0%</td>
+<td class="num">51.0%</td>
+<td class="num">57.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a0.5</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">61.0%</td>
+<td class="num">20.0%</td>
+<td class="num">86.0%</td>
+<td class="num">61.0%</td>
+<td class="num">57.0%</td>
+<td class="num">80.0%</td>
+<td class="num">69.0%</td>
+<td class="num">72.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.0</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">61.0%</td>
+<td class="num">20.0%</td>
+<td class="num">86.0%</td>
+<td class="num">61.0%</td>
+<td class="num">57.0%</td>
+<td class="num">80.0%</td>
+<td class="num">69.0%</td>
+<td class="num">72.0%</td>
+</tr>
+<tr>
+<td>Qwen3 8B</td>
+<td>JBB</td>
+<td>Steering a1.5</td>
+<td class="num">96.0%</td>
+<td class="num">92.0%</td>
+<td class="num">100.0%</td>
+<td class="num">92.0%</td>
+<td class="num">61.0%</td>
+<td class="num">20.0%</td>
+<td class="num">86.0%</td>
+<td class="num">61.0%</td>
+<td class="num">57.0%</td>
+<td class="num">80.0%</td>
+<td class="num">69.0%</td>
+<td class="num">72.0%</td>
+</tr>
+</tbody></table>
+</main>
+</body>
+</html>

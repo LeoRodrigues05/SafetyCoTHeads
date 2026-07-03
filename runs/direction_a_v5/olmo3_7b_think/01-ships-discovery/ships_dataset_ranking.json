@@ -1,0 +1,135 @@
+{
+  "model": "allenai/Olmo-3-7B-Think",
+  "method": "ships",
+  "dataset": "maliciousinstruct",
+  "n_prompts": 100,
+  "config": {
+    "tracker": {
+      "experiment": "direction_a_v5",
+      "run": "ships_discovery_olmo3_7b_think",
+      "status": "runnable"
+    },
+    "seed": 0,
+    "method": "ships",
+    "model": {
+      "name": "allenai/Olmo-3-7B-Think",
+      "dtype": "bfloat16",
+      "attn_implementation": "eager"
+    },
+    "dataset": {
+      "name": "maliciousinstruct",
+      "n": 100
+    },
+    "method_args": {
+      "mask_qkv": [
+        "q"
+      ],
+      "mask_type": "scale_mask",
+      "scale_factor": 0.0001,
+      "top_k": 10,
+      "prompt_template": "## Query:{q}\n## Answer:"
+    },
+    "output": {
+      "dir": "runs/direction_a_v5/olmo3_7b_think/01-ships-discovery",
+      "top_k": 16
+    }
+  },
+  "dataset_ranking": [
+    {
+      "head_id": "0-18",
+      "layer": 0,
+      "head": 18,
+      "mean_score": 0.19754385471343994
+    },
+    {
+      "head_id": "1-0",
+      "layer": 1,
+      "head": 0,
+      "mean_score": 0.048573999907821415
+    },
+    {
+      "head_id": "27-23",
+      "layer": 27,
+      "head": 23,
+      "mean_score": 0.04115907575003803
+    },
+    {
+      "head_id": "25-28",
+      "layer": 25,
+      "head": 28,
+      "mean_score": 0.028927547354251147
+    },
+    {
+      "head_id": "31-15",
+      "layer": 31,
+      "head": 15,
+      "mean_score": 0.02133751065004617
+    },
+    {
+      "head_id": "31-2",
+      "layer": 31,
+      "head": 2,
+      "mean_score": 0.019443250680342316
+    },
+    {
+      "head_id": "16-16",
+      "layer": 16,
+      "head": 16,
+      "mean_score": 0.018352167522534726
+    },
+    {
+      "head_id": "0-4",
+      "layer": 0,
+      "head": 4,
+      "mean_score": 0.018309765574522317
+    },
+    {
+      "head_id": "28-4",
+      "layer": 28,
+      "head": 4,
+      "mean_score": 0.01795626283157617
+    },
+    {
+      "head_id": "28-30",
+      "layer": 28,
+      "head": 30,
+      "mean_score": 0.016188287941622546
+    },
+    {
+      "head_id": "2-17",
+      "layer": 2,
+      "head": 17,
+      "mean_score": 0.016022834312170744
+    },
+    {
+      "head_id": "31-6",
+      "layer": 31,
+      "head": 6,
+      "mean_score": 0.015962043562904
+    },
+    {
+      "head_id": "2-7",
+      "layer": 2,
+      "head": 7,
+      "mean_score": 0.014512374885380269
+    },
+    {
+      "head_id": "13-7",
+      "layer": 13,
+      "head": 7,
+      "mean_score": 0.014383786963298917
+    },
+    {
+      "head_id": "17-15",
+      "layer": 17,
+      "head": 15,
+      "mean_score": 0.014079963518306614
+    },
+    {
+      "head_id": "23-15",
+      "layer": 23,
+      "head": 15,
+      "mean_score": 0.013993121983949095
+    }
+  ]
+}
