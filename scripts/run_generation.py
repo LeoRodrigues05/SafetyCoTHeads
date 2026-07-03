@@ -171,11 +171,18 @@ def main() -> int:
     if scfg_block:
         n_layers_total, _, _ = num_layers_and_heads(lm.model)
         layer = int(scfg_block.get("layer", n_layers_total // 2))
+        mode = scfg_block.get("mode")
+        if mode is None:
+            raise ValueError(
+                f"steering config for condition {cfg.condition!r} is missing "
+                "'mode'; set it to 'add' or 'ablate' explicitly (a silent "
+                "'ablate' default discards the alpha dose)"
+            )
         steering_cfg = build_steering_cfg_from_file(
             lm,
             direction_path=scfg_block["direction_path"],
             layer=layer,
-            mode=scfg_block.get("mode", "ablate"),
+            mode=mode,
             alpha=float(scfg_block.get("alpha", 1.0)),
             layers=scfg_block.get("layers"),
         )

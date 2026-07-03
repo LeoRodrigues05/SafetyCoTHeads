@@ -1,0 +1,35 @@
+{
+  "judge": {
+    "tracker": {
+      "experiment": "direction_a_v5",
+      "run": "v5_judge_qwen3_8b",
+      "status": "runnable"
+    },
+    "model": {
+      "name": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "dtype": "bfloat16",
+      "load_in_4bit": false,
+      "device_map": "auto",
+      "trust_remote_code": false
+    },
+    "max_new_tokens": 96,
+    "base_temperature": 0.0,
+    "retry_temperature": 0.3,
+    "max_retries": 2,
+    "batch_size": 32,
+    "use_chat_template": true,
+    "seed": 0,
+    "n_limit": null,
+    "gate_safety_by_coherence": true
+  },
+  "conditions": [
+    {
+      "tag": "baseline",
+      "cond": "baseline",
+      "completions": "runs/direction_a_v5/qwen3_8b/gen/bt/baseline/seed0/completions_baseline.jsonl",
+      "out_dir": "runs/direction_a_v5/qwen3_8b/judge/bt/baseline/seed0"
+    }
+  ],
+  "n_safety_labels": 5,
+  "n_pathway_labels": 12
+}

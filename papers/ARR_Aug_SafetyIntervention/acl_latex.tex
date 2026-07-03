@@ -1,0 +1,96 @@
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+\usepackage[review]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
+
+% Improves layout/typography.
+\usepackage{microtype}
+\usepackage{inconsolata}
+
+% Graphics.
+\usepackage{graphicx}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+
+% Lists
+\usepackage{enumitem}
+
+% Subfigures.
+\usepackage{subcaption}
+
+% Colour (needed for the draft-note commands below).
+\usepackage{xcolor}
+
+% If the title and author information does not fit in the area allocated,
+% uncomment the following and set <dim> to something 5cm or larger.
+%\setlength\titlebox{5cm}
+
+% ---------------------------------------------------------------------------
+% Custom commands (paper-specific shorthand for the three axes + composite).
+% ---------------------------------------------------------------------------
+\newcommand{\SFS}{\mathrm{SFS}}
+\newcommand{\HAC}{\mathrm{HAC}}          % harmful-among-clean (coherence-gated ASR)
+\newcommand{\Ppot}{P}                    % Potency axis
+\newcommand{\Qual}{Q}                    % Quality axis
+\newcommand{\Sreason}{S}                 % Safety-Reasoning axis
+\newcommand{\gapm}{\mathrm{gap}}         % CoT-monitorability gap
+\newcommand{\clip}{\operatorname{clip}}
+
+% ---------------------------------------------------------------------------
+% Draft notes. Hide these (redefine to {}) for submission.
+% ---------------------------------------------------------------------------
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+\newcommand{\leo}[1]{{\footnotesize\textcolor{blue}{[Leo: #1]}}}
+\newcommand{\thomas}[1]{{\footnotesize\textcolor{purple}{[Thomas: #1]}}}
+
+% ---------------------------------------------------------------------------
+\title{One Number Isn't Enough: A Decomposable Metric for\\
+       Comparing White-Box Safety Interventions on Reasoning Models}
+
+\author{First Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  \texttt{email@domain} \\\And
+  Second Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  \texttt{email@domain} \\}
+
+\begin{document}
+\maketitle
+
+\input{00abs}
+\input{01intro}
+\input{02related}
+\input{03prelim}
+\input{04findings}
+\input{05discussion}
+\input{06conclusion}
+\input{07limitations}
+\input{08acknowledgments}
+
+% Custom bibliography entries only. To include the ACL Anthology as well, use
+% \bibliography{anthology,custom}
+\bibliography{custom}
+
+\appendix
+\input{09appendix}
+
+\end{document}

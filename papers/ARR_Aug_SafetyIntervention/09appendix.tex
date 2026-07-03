@@ -1,0 +1,31 @@
+% =========================================================================
+% APPENDIX   [unlimited] --- everything that supports but would break the 8-page flow.
+% Comes after \appendix in acl_latex.tex (sections renumber to A, B, C, ...).
+% =========================================================================
+
+\section{Full Per-Cell Results}
+\label{sec:appendix-cells}
+% ---- Full (P,Q,S,gap,HAC,SFS,sfs_covert) table for every cell (5 models x 2 datasets
+%      x up to 11 conditions), split by dataset. Source:
+%      runs/direction_a_v5/composite_cells.csv. \TODO import as a longtable.
+
+\section{Judge Prompts and Validation}
+\label{sec:appendix-judges}
+% ---- Verbatim rubrics: 5-label safety, safety-reasoning trace (6 categories), 12-label
+%      pathway taxonomy. Full human-vs-judge kappa tables and inter-annotator agreement
+%      for batch_v5_002. Pathway-judge fine-tuning details (Qwen3-14B LoRA on
+%      HarmThoughts). \TODO.
+
+\section{Metric Definitions and Variants}
+\label{sec:appendix-metric}
+% ---- Full derivation of the baseline-corrected axes, the SFS variants
+%      (sfs_product, sfs_covert), and the Pareto-front computation. \TODO.
+
+\section{Additional Figures}
+\label{sec:appendix-figs}
+% ---- Already rendered in figures/: family_mean_sfs (composite_02),
+%      model_family_sfs_heatmap (composite_04), pqs_pareto_3d (composite_05),
+%      pq_pareto_facets (composite_06), pareto_frontier_clean (composite_07),
+%      metric_diagnostics (composite_08). \TODO include the subset not used in the body.
+
+\TODO{Appendix is outline-only. Populate A--D.}

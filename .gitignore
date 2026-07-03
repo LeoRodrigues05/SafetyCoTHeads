@@ -29,6 +29,18 @@ ENV/
 build/
 dist/
 
+# LaTeX build artifacts (keep .tex/.bib/.sty/.pdf and figures/; ignore intermediates)
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
 # Large local artifacts (model weights, fine-tune datasets)
 models/
 data/pathway_judge_*.jsonl

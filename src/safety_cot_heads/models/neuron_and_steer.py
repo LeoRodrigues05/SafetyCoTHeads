@@ -10,7 +10,7 @@ Implemented methods (see citations next to each class):
   (= rows of ``down_proj.weight``, equivalently dims of its input). Used by
   the Wang et al. (2024) "Finding Safety Neurons" protocol — default
   ablation = scale input dim to 0 (full ablation).
-* :class:`SteeringController` — add a fixed direction $v$ to the residual
+* :class:`SteeringController` — add a fixed unit direction $v$ to the residual
   stream at one or more layers, or project $v$ out entirely. The two modes
   cover (a) DSH-style activation addition (Zou et al. 2023; Turner et al.
   2023) and (b) Arditi et al. (2024) "directional ablation".
@@ -128,13 +128,13 @@ class NeuronMaskController:
 # Direction-steering / directional ablation
 # ===========================================================================
 class SteeringController:
-    """Add a fixed direction to the residual stream, or project it out.
+    """Add a fixed unit direction to the residual stream, or project it out.
 
     Two modes (selected by ``cfg["mode"]``):
 
     * ``"add"`` — at every forward pass through the decoder layer(s) listed
       in ``cfg["layers"]``, replace the layer's input hidden state ``h``
-      with ``h + alpha * v``. Default protocol: Turner et al. (2023)
+      with ``h + alpha * unit(v)``. Default protocol: Turner et al. (2023)
       "Activation Addition" and Zou et al. (2023) "Representation
       Engineering". Choice of layer follows their guidance — usually one
       mid-network layer (≈40 % depth).
@@ -150,7 +150,7 @@ class SteeringController:
     ------------------------------------------------
     * ``mode`` : ``"add"`` | ``"ablate"``
     * ``direction`` : 1-D ``torch.Tensor`` of shape ``(hidden_size,)``;
-      for ``mode="ablate"`` it is L2-normalised internally.
+      it is L2-normalised internally for both ``"add"`` and ``"ablate"``.
     * ``layers`` : ``Sequence[int]`` — which decoder-layer inputs to patch.
       For ``mode="add"`` the original paper picks ONE layer; for
       ``mode="ablate"`` Arditi et al. apply at ALL layers (pass

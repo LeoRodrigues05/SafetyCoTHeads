@@ -4,7 +4,7 @@ Build minimal Llama-shaped stubs (MLP and decoder layer) and verify that:
   * NeuronMaskController zeroes the specified down_proj input dims.
   * SteeringController('ablate') makes the residual orthogonal to the
     refusal direction at the layer's input.
-  * SteeringController('add') shifts the residual by alpha*v.
+  * SteeringController('add') shifts the residual by alpha*unit(v).
 """
 from __future__ import annotations
 import types
@@ -155,7 +155,7 @@ def test_steering_ablate_removes_direction():
     assert proj < 1e-4, f"residual still has direction component: {proj}"
 
 
-def test_steering_add_shifts_by_alpha_v():
+def test_steering_add_shifts_by_alpha_unit_v():
     model, hidden, _ = _make_stub()
     ctrl = SteeringController.attach(model)
     v = torch.randn(hidden)
@@ -174,7 +174,7 @@ def test_steering_add_shifts_by_alpha_v():
         _ = model(h)
     handle.remove()
 
-    expected = h + alpha * v
+    expected = h + alpha * (v / (v.norm() + 1e-8))
     assert torch.allclose(seen["x"], expected, atol=1e-5), (
-        f"layer-0 input was not shifted by alpha*v"
+        f"layer-0 input was not shifted by alpha*unit(v)"
     )

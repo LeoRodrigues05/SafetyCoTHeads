@@ -1,0 +1,27 @@
+tracker:
+  experiment: direction_a_v5
+  run: neurons_top256_r1_distill_qwen_7b_jbb
+  status: runnable
+seed: 0
+condition: neurons_top256
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: jailbreakbench
+  n: null
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 8
+output:
+  dir: runs/direction_a_v5/r1_distill_qwen_7b/gen/jbb/neurons_top256/seed0
+neurons:
+  source: file
+  path: runs/direction_a_v5/r1_distill_qwen_7b/16-neuron-discovery/neuron_ranking.json
+  top_k: 256
+  mask_type: scale_mask
+  scale_factor: 0.0

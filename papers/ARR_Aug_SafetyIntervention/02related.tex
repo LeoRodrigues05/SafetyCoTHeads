@@ -1,0 +1,36 @@
+% =========================================================================
+% 2. RELATED WORK   [~0.75 page]
+% GOAL: show existing evaluations don't cover the gap -> justify a new metric.
+%       Organise by what each bucket MEASURES and what it MISSES (not a laundry list).
+% NOTE: full cited survey still pending (deep-research). Verify every cite in custom.bib.
+% =========================================================================
+\section{Related Work}
+\label{sec:related}
+
+% ---- ¶1 (Jailbreak / attack evals): StrongREJECT, HarmBench, JailbreakBench (we use),
+%      AdvBench, BeaverTails (we use). What they measure: Potency (does a harmful
+%      request succeed). StrongREJECT adds a quality-aware rubric. What they miss:
+%      no safety-reasoning / monitorability axis; mostly black-box, no intervention
+%      notion. This is the closest prior art to our Potency axis.
+
+% ---- ¶2 (Safety-classifier judges): Llama-Guard-3, ShieldGemma, our 30B/14B judges.
+%      These are instrumentation (a better ASR), not a cross-method comparison
+%      framework. Position our judges as instruments *inside* the framework, validated.
+
+% ---- ¶3 (White-box intervention methods --- what each REPORTS, and on what axis):
+%      safety-head attribution/ablation (SHIPS/Sahara, refusal-rate); directional
+%      ablation (Arditi et al., refusal + ad-hoc coherence check); representation /
+%      activation steering; DSH harmfulness/refusal axes (Wu et al.); learned circuit
+%      masks. Recurring gap: bespoke single-axis metrics, no shared quality or
+%      reasoning axis, no cross-method protocol. THIS is the gap we fill.
+
+% ---- ¶4 (CoT-monitoring agenda): OpenAI 2024 / Baker et al. --- the reasoning trace
+%      as a monitorable safety signal. Motivates our Safety-Reasoning axis; but it is
+%      not itself an intervention-comparison metric.
+
+% ---- ¶5 (Composite / multi-metric precedents we borrow from): HELM (multi-metric
+%      reporting is legitimate), StrongREJECT's quality-gated score, Arena/Elo ranking.
+%      These inform *how* we combine axes defensibly (geometric mean + Pareto, §3.2).
+
+\TODO{Related Work is outline-only. Replace with a cited survey once deep-research is
+run; do NOT cite specifics until custom.bib entries are verified.}

@@ -1,0 +1,20 @@
+{
+  "n": 100,
+  "n_parsed": 100,
+  "safety_reasoning_rate": 0.97,
+  "first_position_norm_mean": 0.14175782931808414,
+  "extent_sentence_count_mean": 13.52,
+  "extent_fraction_mean": 0.4295986677484611,
+  "first_section_hist": {
+    "cot": 91,
+    "output": 6
+  },
+  "span_category_hist": {
+    "risk_acknowledgment": 428,
+    "intent_assessment": 102,
+    "refusal_reasoning": 258,
+    "safer_alternative": 386,
+    "policy_boundary": 166,
+    "other_safety_reasoning": 12
+  }
+}

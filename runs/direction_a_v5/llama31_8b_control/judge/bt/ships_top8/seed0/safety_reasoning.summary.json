@@ -1,0 +1,14 @@
+{
+  "n": 98,
+  "n_parsed": 98,
+  "safety_reasoning_rate": 0.01020408163265306,
+  "first_position_norm_mean": 0.0,
+  "extent_sentence_count_mean": 0.01020408163265306,
+  "extent_fraction_mean": 0.01020408163265306,
+  "first_section_hist": {
+    "output": 1
+  },
+  "span_category_hist": {
+    "refusal_reasoning": 1
+  }
+}
