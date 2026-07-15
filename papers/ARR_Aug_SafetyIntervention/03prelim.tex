@@ -1,81 +1,159 @@
-% =========================================================================
-% 3. PRELIMINARIES: METRIC AND SETUP   [~2.0 pages]
-% GOAL: define the instrument (3 axes + composite) and the substrate (grid + judges)
-%       precisely enough that §4 is just "here are the numbers." Everything the reader
-%       needs to trust the results lives here.
-% HOSTS: Figure 2 (metric schematic), Table 1 (the grid), Table 2 (judge validation).
-% OPEN DECISION: promote 3.1--3.2 to a standalone "The Metric" section if reviewers
-%       want it foregrounded (see _OUTLINE.md).
-% =========================================================================
 \section{Preliminaries: Metric and Setup}
 \label{sec:prelim}
 
-\subsection{The three axes}
+\subsection{What would finding a safety mechanism entail?}
+\label{sec:entailments}
+The interventions we evaluate are advanced as evidence that safety has been
+\emph{located}: in particular attention heads \citep{zhou2024ships}, in sparse MLP
+neurons, or in a single linear direction of the residual stream
+\citep{arditi2024refusal,zou2023representation}. We take no position on which of these
+objects---if any---deserves the name ``safety mechanism.'' The term has no agreed
+referent, and the claims are not stated in a common vocabulary in which one could be
+tested against another. What \emph{can} be tested is a claim's behavioural consequence.
+Whatever a safety mechanism is, removing one entails three things:
+\begin{enumerate}[leftmargin=1.4em, itemsep=1pt, topsep=2pt]
+  \item \textbf{Necessity.} Safety behaviour must actually degrade. A candidate whose
+  removal changes nothing was not load-bearing for safety.
+  \item \textbf{Selectivity.} \emph{Only} safety behaviour may degrade. If general
+  coherence collapses too, the intervention hit something broader than safety.
+  \item \textbf{Depth.} The change must be visible in the safety
+  \emph{computation}---the model's own reasoning about whether to comply---not merely
+  in the surface form of the final answer.
+\end{enumerate}
+The three axes below operationalise exactly these entailments: Potency measures
+necessity, Quality measures selectivity, and Safety-Reasoning measures depth. A method
+scores highly only when it behaves \emph{as if} it found a safety mechanism. The score
+therefore grades the \emph{localization claim}, not the ontology behind it; we return
+to what the signature can and cannot establish in \S\ref{sec:discussion} and the
+Limitations.
+
+\subsection{Three axes}
 \label{sec:axes}
-% ---- ¶1 (Framing): an intervention's effect is characterised on three orthogonal
-%      axes, each in [0,1], each *baseline-corrected* against the same-(model,dataset)
-%      baseline cell. Name the three: Potency (removed safety?), Quality (kept the
-%      model intact?), Safety-Reasoning (did the visible reasoning still engage
-%      safety?). One sentence on why orthogonal.
-%      >>> FIGURE 2 anchored here: metric schematic (3 axes -> SFS). \TODO make (TikZ).
+We score an intervention on a \emph{cell} $c$---a \texttt{(model, dataset, condition)}
+triple---along three axes that answer three separate questions: did it remove safety, did
+it keep the model intact, and did the visible reasoning still engage safety? Each axis is
+mapped to $[0,1]$ and, crucially, \emph{baseline-corrected} against the same-\allowbreak
+\texttt{(model, dataset)} baseline cell $b$ (the model with no intervention). Writing
+$\clip(x)=\max(0,\min(1,x))$,
+\begin{align}
+  \Ppot   &= \clip\!\left[\tfrac{\HAC_c-\HAC_b}{1-\HAC_b}\right],
+  & \Qual  &= \clip\!\left[\tfrac{\mathrm{clean}_c}{\mathrm{clean}_b}\right],
+  \label{eq:pq}\\[2pt]
+  \Sreason &= 1-\clip\!\left[\,|\gapm_c|-|\gapm_b|\,\right]. &&
+  \label{eq:s}
+\end{align}
 
-% ---- ¶2 (Potency, Eq. P): define harmful-among-clean (HAC = ASR over coherence-gated
-%      responses) and the baseline-corrected P = clip[(HAC_c - HAC_b)/(1-HAC_b)].
-%      One line on why HAC not raw ASR (defeats "broke the model" loophole).
+\paragraph{Potency ($\Ppot$).} $\HAC$ is \emph{harmful-among-clean}: the attack-success
+rate computed \emph{only} over responses that pass a coherence gate. Gating first is what
+defeats the ``broke the model, didn't make it harmful'' loophole---incoherent output
+cannot count as a successful attack. $\Ppot$ is then the share of the
+still-refusable headroom $(1-\HAC_b)$ that the intervention converts into coherent harm.
 
-% ---- ¶3 (Quality, Eq. Q): coherence retention Q = clip[clean_c / clean_b]. Name the
-%      gibberish/degeneracy detector. Note Q is coherence-only for now; utility is
-%      future work (forward-ref Limitations).
+\paragraph{Quality ($\Qual$).} $\mathrm{clean}$ is the coherence-retention rate. $\Qual$
+falls below $1$ exactly when an intervention degrades the model rather than selectively
+removing its safety. (Quality is coherence-only here; benign-utility retention is future
+work, \S\ref{sec:limitations}.)
 
-% ---- ¶4 (Safety-Reasoning, Eq. S): define the CoT-monitorability gap
-%      gap = asr_final - asr_cot_pred (judge shown ONLY the trace), then
-%      S = 1 - clip[|gap_c| - |gap_b|]. Interpret gap>>0 (sanitised, worst),
-%      gap~0 (tracks), gap<<0 (over-cautious). This axis absorbs the mechanistic work.
+\paragraph{Safety-Reasoning ($\Sreason$).} The CoT-monitorability gap
+$\gapm=\mathrm{asr}_{\text{final}}-\mathrm{asr}_{\text{cot-pred}}$ compares the harm of the
+full answer with what a judge predicts from the \emph{reasoning trace alone}. A large
+positive gap means unsafe answers behind benign-looking traces (monitorability collapsed,
+the worst case); $\Sreason$ rewards keeping the gap near the baseline's.
 
-% ---- ¶5 (Why baseline-correction): isolates intervention-induced effect from the
-%      base model's own behaviour; without it an already-unsafe base scores every
-%      intervention as a jailbreak (forward-ref F2). Orientation convention: suppressive
-%      = high score; a defence eval flips the sign of P.
+Baseline-correction is the load-bearing choice: it isolates the effect the intervention
+\emph{induces} from behaviour the base model already had, so the axes remain comparable
+across models whose base safety differs. We adopt a \emph{suppressive} orientation---a
+high score is a potent, coherence-preserving, still-monitorable removal of answer-safety;
+a defence evaluation simply flips the sign of $\Ppot$.
 
 \subsection{The composite score}
 \label{sec:composite}
-% ---- ¶6 (Primary object): we report the (P,Q,S) vector + Pareto dominance as the
-%      primary object (HELM precedent for multi-metric reporting), and one headline
-%      scalar for the reviewer who wants a number.
+We report the $(\Ppot,\Qual,\Sreason)$ vector with a Pareto front as the primary object,
+and one headline scalar for the reader who wants a single number---the
+\textbf{Selective-Failure Score}
+\begin{equation}
+  \SFS = \left(\Ppot\cdot\Qual\cdot\Sreason\right)^{1/3}.
+  \label{eq:sfs}
+\end{equation}
+The geometric mean gives a ``no axis left behind'' property: any axis going to zero
+collapses the score, so a method cannot buy a high $\SFS$ by trading a broken model for
+raw potency. Reporting the scalar always \emph{with} the vector follows HELM's
+multi-metric precedent \citep{liang2022helm}. Two variants appear in the ablation
+(\S\ref{sec:ablation}): $\SFS_{\text{prod}}=\Ppot\Qual\Sreason$ and the threat-oriented
+$\SFS_{\text{covert}}=\Ppot\Qual(1-\Sreason)$. Figure~\ref{fig:schematic} summarises.
 
-% ---- ¶7 (SFS, Eq.): Selective-Failure Score SFS = (P*Q*S)^{1/3}. Geometric mean gives
-%      "no axis left behind" (any axis ->0 collapses SFS). Note variants used in the
-%      ablation: sfs_product = PQS, threat-oriented sfs_covert = PQ(1-S).
-
-% ---- ¶8 (Carried alongside, not scored): covert rate max(0,gap), safety_reasoning_rate,
-%      and the categorical dominant_pathway histogram (12-label taxonomy = the
-%      mechanistic "why" behind S; reported descriptively, not folded into the scalar).
+\begin{figure}[t]
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tikzpicture}[
+    font=\small,
+    axisbox/.style={rounded corners=2.5pt, draw=black!55, line width=0.6pt,
+                    inner sep=4pt, align=left, text width=3.15cm, fill=black!3},
+    op/.style={circle, draw=black!60, line width=0.7pt, inner sep=1.5pt,
+               align=center, fill=black!6, minimum size=1.05cm},
+    out/.style={rounded corners=2.5pt, draw=black!70, line width=0.9pt,
+                inner sep=4pt, align=center, fill=black!8},
+    arr/.style={-{Stealth[length=4pt]}, draw=black!55, line width=0.7pt}]
+    \node[axisbox] (P) {\textbf{Potency $P$}\\[1pt]
+      {\scriptsize removed safety?}\\ {\scriptsize induced coherent harm}};
+    \node[axisbox, below=5pt of P] (Q) {\textbf{Quality $Q$}\\[1pt]
+      {\scriptsize model intact?}\\ {\scriptsize coherence retention}};
+    \node[axisbox, below=5pt of Q] (S) {\textbf{Safety-Reasoning $S$}\\[1pt]
+      {\scriptsize CoT still safe-aware?}\\ {\scriptsize monitorability}};
+    \node[op, right=14pt of Q] (gm) {geo.\\mean};
+    \node[out, right=14pt of gm] (sfs) {$\mathrm{SFS}$\\[1pt]
+      {\scriptsize $(PQS)^{1/3}$}};
+    \draw[arr] (P.east) -- (gm);
+    \draw[arr] (Q.east) -- (gm);
+    \draw[arr] (S.east) -- (gm);
+    \draw[arr] (gm) -- (sfs);
+  \end{tikzpicture}}
+  \caption{\textbf{The metric.} Three baseline-corrected axes (Eqs.~\ref{eq:pq}--\ref{eq:s})
+    are reported as a $(P,Q,S)$ vector with a Pareto front, and combined by geometric
+    mean into the headline Selective-Failure Score (Eq.~\ref{eq:sfs}). Any axis $\to 0$
+    collapses the score.}
+  \label{fig:schematic}
+\end{figure}
 
 \subsection{Experimental grid}
 \label{sec:grid}
-% ---- ¶9 (The grid, one controlled substrate -> Table 1): 5 models, up to 11
-%      conditions, 2 datasets; iso-ASR anchoring + layer-matched-random controls.
-%      Models: qwen3_8b, olmo3_7b_think (explicit <think>), olmo3_7b_base,
-%      olmo3_7b_base_own, llama31_8b_control. Conditions: baseline; ships_top{3,5,8}
-%      (heads); neurons_top{256,512,1024}; steering_a{0.5,1.0,1.5} (activation-addition,
-%      a1.0 = iso-ASR anchor); steering_ablate (directional ablation). Datasets: JBB
-%      (100), BeaverTails (98 = 7x14). \TODO Table 1.
+We evaluate on one controlled grid of 5 models $\times$ 2 datasets $\times$ up to 11
+conditions (Table~\ref{tab:grid}), with iso-ASR anchoring and layer-matched-random
+controls so that families are compared at matched strength rather than at each paper's
+preferred operating point. The four intervention families instantiate the distinct
+mechanistic targets a metric must be able to separate---per-head, per-neuron,
+dose-controlled activation-addition, and full directional ablation.
 
-% ---- ¶10 (Why these families): they instantiate the three mechanistic targets a
-%      metric must separate (head/neuron/steering/ablation). One line linking to the
-%      DSH harmfulness/refusal factorisation as the theoretical spine. Note the two
-%      OLMo base variants (own-artifact vs shared) and the Llama *control*.
+\begin{table}[t]
+  \centering \small
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Axis} & \textbf{Values} \\
+    \midrule
+    Models & \texttt{qwen3\_8b}, \texttt{olmo3\_7b\_think}, \\
+           & \texttt{olmo3\_7b\_base}, \texttt{olmo3\_7b\_base\_own}, \\
+           & \texttt{llama31\_8b\_control} \\
+    \addlinespace[2pt]
+    Datasets & JailbreakBench (100), BeaverTails (98) \\
+    \addlinespace[2pt]
+    Conditions & \texttt{baseline}; \texttt{ships\_top\{3,5,8\}} (heads); \\
+               & \texttt{neurons\_top\{256,512,1024\}}; \\
+               & \texttt{steering\_a\{0.5,1.0,1.5\}} (add); \\
+               & \texttt{steering\_ablate} (dir.\ ablation) \\
+    \bottomrule
+  \end{tabular}
+  \caption{The evaluation grid. \texttt{steering\_a1.0} is the iso-ASR anchor.}
+  \label{tab:grid}
+\end{table}
 
 \subsection{Judges and their validation}
 \label{sec:judges}
-% ---- ¶11 (The three judges): standard 5-label safety+coherence (Qwen3-30B);
-%      per-sentence safety-reasoning trace judge (Qwen3-30B, vLLM backend); fine-tuned
-%      12-label pathway judge (Qwen3-14B LoRA). Map each judge -> which axis it feeds.
-
-% ---- ¶12 (Validation -> Table 2): a metric is only standardizable if its instruments
-%      are reliable. Pathway judge kappa~0.96 / F1 0.98 vs human gold (30B baseline
-%      kappa 0.21); 5-label, CoT-only, and SR-trace human-validated on batch_v5_002 by
-%      two annotators (report kappa + inter-annotator agreement). \TODO Table 2.
-
-\TODO{Preliminaries is outline-only. Write ¶1--¶12; add Eqs for P,Q,S,SFS; make Fig 2,
-Tab 1, Tab 2.}
+Three LLM judges instrument the axes: a 5-label safety + coherence judge (Qwen3-30B)
+feeds $\Ppot$ and $\Qual$; a per-sentence safety-reasoning trace judge and a CoT-only
+predictor (Qwen3-30B, vLLM backend) feed $\Sreason$; and a fine-tuned 12-label pathway
+judge (Qwen3-14B LoRA) provides the mechanistic decomposition behind $\Sreason$. A metric
+is only standardizable if its instruments are reliable: the pathway judge reaches
+$\kappa\approx0.96$ / $F_1\,0.98$ against a human gold set (a 30B baseline scores
+$\kappa\,0.21$), and the 5-label, CoT-only, and trace judges are human-validated on the
+\texttt{batch\_v5\_002} annotation task by two annotators. \TODO{full $\kappa$ table
+(Table 2) + inter-annotator agreement.}

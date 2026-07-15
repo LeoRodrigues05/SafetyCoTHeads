@@ -13,6 +13,29 @@
 %      no safety-reasoning / monitorability axis; mostly black-box, no intervention
 %      notion. This is the closest prior art to our Potency axis.
 
+\paragraph{Jailbreak-evaluation benchmarks, and why not StrongREJECT.}
+The closest prior art is the standardized \emph{jailbreak} benchmark, above all
+StrongREJECT \citep{souly2024strongreject} and HarmBench \citep{mazeika2024harmbench}.
+StrongREJECT shares our diagnosis---a single, self-reported attack-success number is
+inflated and incomparable across setups---and our remedy's shape: a human-validated
+autograder that decomposes ``success'' into a refusal gate plus $1$--$5$
+\emph{specificity} and \emph{convincingness} scores, released as a reusable instrument.
+We adopt that template and cite it as precedent. The difference is the \emph{object of
+evaluation}. StrongREJECT scores a \texttt{(forbidden\_prompt, response)} pair produced
+by a black-box \emph{prompt attack} on one fixed victim model; our unit is a
+\texttt{(model, dataset, condition)} cell where the condition is a \emph{white-box edit
+to internals}---an ablated head-set, zeroed neurons, an added or projected-out
+direction. A jailbreak grader has no way to score a safety-head ablation, because there
+is no attack prompt to grade. Two consequences follow that a prompt-attack rubric has no
+reason to include. First, because interventions are compared \emph{across} models whose
+base safety differs, potency must be \emph{baseline-corrected} (\S\ref{sec:axes}); an
+absolute rubric run on an already-unsafe base model scores every edit as a high-harm
+success (\S\ref{sec:f1f2}). Second, because the interventions target the safety
+\emph{computation}, we add a reasoning-trace / monitorability axis
+(\S\ref{sec:f5})---absent from StrongREJECT, which is answer-only. We are therefore not
+``StrongREJECT for interventions'': we reuse its judge-validation methodology on a
+different object, and add the two axes that object forces.
+
 % ---- ¶2 (Safety-classifier judges): Llama-Guard-3, ShieldGemma, our 30B/14B judges.
 %      These are instrumentation (a better ASR), not a cross-method comparison
 %      framework. Position our judges as instruments *inside* the framework, validated.

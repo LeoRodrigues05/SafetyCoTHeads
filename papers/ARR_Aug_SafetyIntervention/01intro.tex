@@ -1,57 +1,90 @@
-% =========================================================================
-% 1. INTRODUCTION   [~1.25 pages, incl. Fig 1 teaser]
-% GOAL: land the gap, prove one ASR is inadequate, state the dual contribution,
-%       teaser the 5 findings. By end of p.1 the reader knows exactly what's new.
-% HOSTS: Figure 1 (teaser: raw ASR vs SFS).
-% =========================================================================
 \section{Introduction}
 \label{sec:intro}
 
-% ---- ¶1 (The landscape): a wave of inference-time / white-box interventions now
-%      exists (safety-head ablation, neuron ablation, refusal-direction steering,
-%      directional ablation, learned masks). Each is reported on its own setup with
-%      its own metric --- almost always a single ASR or refusal-rate. Cite the
-%      family papers. Topic sentence sets up "many methods, no common yardstick."
+A growing body of work claims to have found \emph{where safety lives} inside a language
+model---and offers as evidence an inference-time edit of that location. Safety-relevant
+attention heads are ablated \citep{zhou2024ships}, safety neurons zeroed, a single
+``refusal direction'' projected out of every layer \citep{arditi2024refusal} or
+re-injected at a tunable dose \citep{zou2023representation}. Each such
+\emph{white-box intervention} is, implicitly, a \textbf{localization claim}: safety is a
+handful of heads; safety is a sparse set of neurons; safety is one linear direction.
+These claims are mutually incompatible---they do not even agree on what \emph{kind} of
+object a ``safety mechanism'' is---and the term itself has no agreed referent that could
+settle the matter. Worse, each claim is evidenced with its own metric on its own setup,
+typically a single attack-success-rate (ASR) or refusal-rate, so \textbf{there is no
+direct, apples-to-apples way to compare what any two methods actually found.}
 
-% ---- ¶2 (The gap, sharpened): there is no apples-to-apples way to compare two
-%      methods. State it as the paper's target. One line: an ASR is a scalar summary
-%      that presupposes the comparison it should enable.
+We do not attempt to define ``safety mechanism''; we doubt a definition is currently
+available, and we do not need one. We make an \emph{operational} move instead: whatever
+a safety mechanism is, an intervention that has genuinely found one must leave a
+characteristic behavioural signature when it removes it. It must actually degrade safety
+behaviour (\emph{necessity}: a target whose removal changes nothing was not
+load-bearing); it must degrade \emph{only} safety behaviour (\emph{selectivity}:
+collateral incoherence means the target was broader than safety); and the change must
+reach the model's visible safety \emph{computation}, not merely the surface form of the
+answer (\emph{depth}). These entailments are testable on shared ground even though the
+underlying ontologies are not---and they are exactly the three axes of the metric we
+propose (\S\ref{sec:prelim}).
 
-% ---- ¶3 (Why one ASR is inadequate --- the 3 collapses): (a) coherent harm vs a
-%      broken model (regex counts gibberish as non-refusal); (b) visibly-unsafe vs
-%      sanitised CoT (monitorability); (c) potency/fluency trade-off. This ¶ motivates
-%      exactly the three axes we later define --- foreshadow P, Q, S here.
-%      >>> FIGURE 1 anchored here (teaser): figures/composite_03_raw_asr_vs_sfs.png ---
-%          same raw ASR, wildly different decomposed score. \TODO caption.
+A single ASR tests none of these entailments; it is not just noisy but \emph{ambiguous}.
+Two methods that both raise ASR to, say, $70\%$ can be doing very different things. One
+may induce fluent, on-topic harmful answers, while the other simply \emph{breaks} the
+model into degenerate text that a refusal-detector nonetheless scores as a non-refusal.
+One may leave the chain-of-thought (CoT) visibly unsafe---and therefore still
+monitorable---while the other produces unsafe answers from sanitised-looking traces. And
+the two may sit at completely different points on the potency--fluency trade-off. A lone
+ASR collapses all of these distinctions into one number. Figure~\ref{fig:teaser} makes
+the problem concrete: across our grid, cells with nearly identical raw ASR span almost
+the entire range of a decomposed score, so the ASR ranking and the decomposed ranking
+disagree.
 
-% ---- ¶4 (Our stance): we are on the *evaluation* side; the deliverable is a
-%      measurement instrument, not a new attack or defence. Distinguish from the
-%      intervention papers themselves.
+We take an \emph{evaluation} stance: our deliverable is a measurement instrument, not a
+new attack or defence. We make a dual contribution.
+\begin{enumerate}[leftmargin=1.4em, itemsep=2pt, topsep=3pt]
+  \item \textbf{A comparative study.} We run four representative intervention
+  families---four distinct localization claims---through one controlled grid: the same
+  models, prompts, judges, and matching protocol. To our knowledge this is the first
+  head-to-head test of what white-box safety interventions actually find, on shared
+  axes (\S\ref{sec:prelim}).
+  \item \textbf{A proposed standardized metric.} We operationalise the three
+  entailments above as three baseline-corrected axes---\textbf{Potency} (necessity),
+  \textbf{Quality} (selectivity), and \textbf{Safety-Reasoning} (depth)---reported as a
+  vector with a Pareto front, plus a single headline scalar, the geometric-mean
+  Selective-Failure Score. A method scores highly only when it behaves \emph{as if} it
+  found a safety mechanism; the score grades the localization claim without committing
+  to an ontology. The aim is a comparable, decomposable number future intervention
+  papers can adopt, in the role StrongREJECT \citep{souly2024strongreject} and
+  HarmBench \citep{mazeika2024harmbench} play for jailbreak evaluation.
+\end{enumerate}
+The two halves reinforce each other: the comparison motivates and validates the metric
+(it must separate methods that are genuinely different), and the metric operationalises
+the comparison (it makes ``different'' precise and reusable).
 
-% ---- ¶5 (Contribution, dual --- itemised): (1) comparative study on one controlled
-%      grid; (2) a proposed standardized, decomposable metric (P,Q,S -> SFS) that
-%      future papers can adopt, playing the StrongREJECT/HarmBench role for
-%      interventions rather than jailbreaks. State both are needed (comparison
-%      validates the metric; metric operationalises the comparison).
+Applying the metric across the grid yields five findings. \textbf{(F1)}~A single
+coherence-gated ASR mis-ranks methods---Kendall's $\tau$ against the decomposed score
+falls as low as $0.73$. \textbf{(F2)}~Baseline-correction is essential on models whose
+base behaviour is not already safe: on an unsafe base model a raw leaderboard calls
+\emph{ten} interventions a ${\sim}70\%$ jailbreak, while corrected potency shows most add
+almost no harm (\S\ref{sec:f1f2}). \textbf{(F3)}~Coherence-gating separates ``removed
+safety'' from ``broke the model.'' \textbf{(F4)}~The four families separate cleanly once
+the score is decomposed: at matched strength, direction-based methods pass the
+mechanism signature while head- and neuron-level localizations largely fail
+necessity---and steering shows a clean dose-response. \textbf{(F5)}~For these
+suppressive interventions the CoT monitor does \emph{not} covertly fail: the model still
+visibly reasons about safety and is overridden, i.e.\ the interventions suppress the
+mechanism's \emph{output} rather than deleting its upstream computation---a result that
+reframes, rather than confirms, our pre-registered hypothesis, and which the metric is
+designed to surface honestly rather than average away. We release the metric, the
+grid, and the human-validated judges.
 
-% ---- ¶6 (Findings teaser): F1 a single ASR mis-ranks methods; F2 baseline-correction
-%      essential; F3 coherence-gating separates removal from breakage; F4 families
-%      separate once decomposed; F5 no covert CoT failure (reframes pre-registered H3)
-%      --- and note the metric surfaces this null honestly.
-
-% ---- ¶7 (Roadmap + release, optional 2 lines): section pointers; we release metric,
-%      grid, and human-validated judges.
-
-\TODO{Intro is outline-only (see paragraph plan above). Write ¶1--¶7 as prose;
-place Fig 1 at ¶3.}
-
-% >>> Figure 1 (teaser). Uncomment and fill when drafting.
-% \begin{figure}[t]
-%   \centering
-%   \includegraphics[width=\columnwidth]{figures/composite_03_raw_asr_vs_sfs.png}
-%   \caption{\textbf{One number isn't enough.} Each point is a
-%     \texttt{(model,dataset,condition)} cell: raw coherence-gated ASR (x) vs the
-%     decomposed Selective-Failure Score (y). \TODO{describe the vertical bands ---
-%     cells with near-identical ASR span the full range of SFS.}}
-%   \label{fig:teaser}
-% \end{figure}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/composite_03_raw_asr_vs_sfs.png}
+  \caption{\textbf{One number isn't enough.} Each point is a
+    \texttt{(model, dataset, condition)} cell: the raw coherence-gated ASR that current
+    papers report ($x$) against our decomposed Selective-Failure Score ($y$). If ASR
+    were sufficient the points would track the diagonal. Instead, vertical bands of cells
+    with near-identical ASR span almost the full range of the decomposed score---the two
+    rankings disagree (Kendall $\tau$ down to $0.73$, \S\ref{sec:f1f2}).}
+  \label{fig:teaser}
+\end{figure}
