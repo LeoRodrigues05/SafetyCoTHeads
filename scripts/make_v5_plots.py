@@ -33,10 +33,11 @@ CLBL = {"baseline": "base", "ships_top3": "ships3", "ships_top5": "ships5",
         "steering_a1.0": "steer1", "steering_a1.5": "steer1.5", "steering_ablate": "ablate"}
 DATASETS = ["jbb", "bt"]
 MODEL_ORDER = ["llama31_8b_control", "olmo3_7b_base_own", "qwen3_8b",
-               "olmo3_7b_think", "olmo3_7b_base"]
+               "olmo3_7b_think", "olmo3_7b_base", "r1_distill_qwen_7b"]
 DISPLAY = {"qwen3_8b": "Qwen3 8B", "llama31_8b_control": "Llama 3.1 8B",
            "olmo3_7b_think": "OLMo-3 7B Think", "olmo3_7b_base": "OLMo-3 7B Base",
-           "olmo3_7b_base_own": "OLMo-3 7B Base-own"}
+           "olmo3_7b_base_own": "OLMo-3 7B Base-own",
+           "r1_distill_qwen_7b": "R1-Distill Qwen 7B"}
 COL = {m: c for m, c in zip(MODEL_ORDER, plt.get_cmap("tab10").colors)}
 
 # (model, ds, cond) -> merged metric dict

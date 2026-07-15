@@ -53,6 +53,7 @@ DEFAULT_MODELS = (
     "olmo3_7b_think",
     "olmo3_7b_base",
     "olmo3_7b_base_own",
+    "r1_distill_qwen_7b",
 )
 
 
