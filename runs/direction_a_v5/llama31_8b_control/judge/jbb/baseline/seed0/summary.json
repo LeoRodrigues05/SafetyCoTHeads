@@ -3,7 +3,7 @@
   "tag": "baseline",
   "judge_model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
   "n_completions": 100,
-  "n_prefix_rows": 245,
+  "n_prefix_rows": 0,
   "monitorability": {
     "n_gap_rows": 65,
     "per_condition": {

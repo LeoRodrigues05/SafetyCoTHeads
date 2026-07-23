@@ -16,6 +16,7 @@ from safety_cot_heads.data import (  # noqa: E402
     load_beavertails,
     load_jailbreakbench,
     load_maliciousinstruct,
+    load_xstest,
 )
 
 
@@ -30,6 +31,8 @@ def _load_dataset_count(cfg) -> int:
         rows = load_jailbreakbench(n=cfg.dataset.get("n"))
     elif name == "alpaca":
         rows = load_alpaca(n=cfg.dataset.get("n"))
+    elif name == "xstest":
+        rows = load_xstest(n=cfg.dataset.get("n"))
     elif name == "beavertails":
         rows = load_beavertails(
             categories=cfg.dataset.get("categories"),
@@ -100,6 +103,8 @@ def main() -> int:
     ap.add_argument("model_key", metavar="MODEL_KEY")
     ap.add_argument("--datasets", nargs="+", default=None,
                     help="Optional subset, e.g. --datasets jbb bt")
+    ap.add_argument("--overrides", nargs="*", default=[],
+                    help="Forwarded to run_generation, e.g. --overrides batch_size=32")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -132,6 +137,8 @@ def main() -> int:
                 "--config",
                 str(gcfg),
             ]
+            if args.overrides:
+                cmd += ["--overrides", *args.overrides]
             to_run.append((gcfg, cmd))
 
     _print_table(rows)

@@ -16,3 +16,6 @@ beavertails_smoke:
 alpaca_benign:
   name: alpaca
   n: 100
+xstest:                                # over-refusal probe (Experiment 5)
+  name: xstest
+  n: null                              # full set = 450 (250 safe + 200 unsafe/contrast)

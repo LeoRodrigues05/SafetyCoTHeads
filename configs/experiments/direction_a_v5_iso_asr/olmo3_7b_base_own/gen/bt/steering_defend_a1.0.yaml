@@ -1,0 +1,27 @@
+tracker:
+  experiment: direction_a_v5
+  run: steering_defend_a1.0_olmo3_7b_base_own_bt
+  status: runnable
+seed: 0
+condition: steering_defend_a1.0
+model:
+  name: allenai/Olmo-3-1025-7B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: 7
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 512
+batch_size: 64
+output:
+  dir: runs/direction_a_v5/olmo3_7b_base_own/gen/bt/steering_defend_a1.0/seed0
+steering:
+  direction_path: runs/direction_a_v5/olmo3_7b_base/17-direction-extraction/refusal_directions.npz
+  layer: 14
+  mode: add
+  alpha: 8.0

@@ -5,12 +5,5 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-% ---- ¶1 (Wrap): interventions are reported with bespoke single-axis ASRs that can't be
-%      compared and demonstrably mis-rank methods. We gave the first head-to-head
-%      comparison on shared axes and a decomposable metric --- a baseline-corrected
-%      (P,Q,S) vector with a geometric-mean Selective-Failure Score. Its distinctive
-%      value is reporting an axis honestly even when it returns a null (current
-%      suppressive interventions do not covertly defeat the CoT monitor). We release the
-%      metric, grid, and human-validated judges for adoption.
-
-\TODO{Conclusion is outline-only. Write ¶1.}
+White-box interventions are routinely offered as evidence that a model's safety has been \emph{localized}; yet each is validated with its own single attack-success rate, which cannot be compared across methods and, as we show, cannot distinguish a faithful localization from a broken model or from harm the model has already produced. We recast the question as one of measurement: whatever a safety mechanism is, an intervention that has found one should leave a behavioral signature when it is removed, and we operationalize that signature as three baseline-corrected axes: potency, quality, and safety-reasoning, reported as a vector with a Pareto front and a single
+Selective-Failure Score. Applying it in the first head-to-head study of four intervention families across five models and two datasets, we find that raw attack-success systematically overstates how well interventions capture safety, that direction-based methods localize much more faithfully than per-head or per-neuron ablation while no method wins on every model, and that these interventions override safety at the output rather than deleting it, leaving the chain-of-thought monitorable but only on models that reason in the open. We release the metric, the evaluation grid, and the human-validated judges, and hope that reporting induced, coherence-gated, reasoning-aware harm, rather than a lone attack-success rate, becomes the default for evaluating safety interventions.

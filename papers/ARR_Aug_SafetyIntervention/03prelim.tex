@@ -1,6 +1,66 @@
 \section{Preliminaries: Metric and Setup}
 \label{sec:prelim}
 
+\subsection{Interventional methods for locating safety mechanisms}
+Interventional methods from MI are designed to investigate the effect that the steps of the computational process in a model have on the final output. Interventional methods change model-parameters and interpret the effect of the parameters by assessing how outputs are affected by the intervention. Since it is infeasible to examine all possible combinations of parameters from modern LLMs, methods have been developed to locate the specific parameters of interest for a given behavior. We employ 3 methods that find components critical for safe behavior in LLMs: \textit{Safety Head ImPortance Score} (SHIPS) uses attention head ablation as the intervention \citep{zhou2024ships}, \textit{Safety Neuron Detection} (SND) uses neuron deactivation as the intervention \citep{zhao2025neuron}, and \textit{Refusal Direction Extraction} that uses vector steering and vector ablation as the intervention \citep{arditi2024refusal}. In the following, we will present each method as well as the interventions. First of all we have an LLM, $\mathcal{M}_{base}$ and an intervention on an LLM, $\text{intervention}(\mathcal{M}_{base}) = \mathcal{M}_{int}$, a set of potentially harmful queries, $\textbf{X}^{harm} = \{\textbf{x}_1^{harm},\textbf{x}_2^{harm},...,\textbf{x}_m^{harm}\}$ and a set of safe queries, $\textbf{X}^{safe} = \{\textbf{x}_1^{safe},\textbf{x}_2^{safe},...,\textbf{x}_m^{safe}\}$. $h(x)$ is the value in the residual stream at any given point.
+\\
+Attention head ablation removes the effect of an attention head, $head_i$, by multiplying the query-matrix, $W_i^Q$, with a small number, $\epsilon$:
+\begin{equation*}    
+    head_i^{int} = \text{softmax}(\frac{\epsilon W_i^QW_i^{KT}}{\sqrt{d/n}})W_i^V
+\end{equation*}
+To locate which attention heads are critical for safe behavior, we obtain $A(\mathcal{M},X_{harm})$, which is the matrix of activations from the last layer in $\mathcal{M}$, when processing $\textbf{X}_{harm}$. We then compute the SHIPS of each attention head:
+\begin{equation*}
+    SHIPS(A_{base},A_{int},head_i) = \sum_j^r \phi_j
+\end{equation*}
+where $\phi_j$ is the principal angle between the first $r$ columns of the left-singular matrix from $U_\mathcal{A_{harm}}$, and the left-singular matrix from, $U_{A_{int}}$. \textcolor{red}{not done yet...}
+\\
+To find a collection of heads that together has the greatest impact on safety, \citeauthor{zhou2024ships} defines the \textit{Safety Attention Head AttRibution Algorithm} (SAHARA), which takes an LLM, $\mathcal{M}$, a set of queries, $X$, a small factor, $\epsilon$ and a number of heads, $n$, and for $n$ iterations, iteratively computes the SHIPS and ablates the highest scoring head.
+\\
+Neuron deactivation sets all values in a neuron, $N_i$, to zero. A neuron is a row or column in the parameter matrices in an attention head or MLP. We locate neurons critical for safety from an MLP-layer, by calculating the importance of the neuron:
+\begin{equation*}
+    \mathcal{N}_{MLP}(x^{harm}) = ||h_{\mathrm{up}}(x^{harm}) \cdot \texttt{Mask} \bigr) W_{\mathrm{down}}||_2
+\end{equation*}
+where $h_{\mathrm{up}}(x^{harm})$ is the activation after up-projection, \texttt{Mask} is the identity-matrix of size $\text{dim}(h_{\mathrm{up}}) \times \text{dim}(h_{\mathrm{up}})$ and $W_{\mathrm{down}}$ is the down-projection matrix.
+\\
+Calculating the importance of neurons from attention head layers, we use the formula:
+\[\resizebox{\columnwidth}{!}{$\displaystyle
+\begin{aligned}
+    \mathcal{N}_{att}(x^{harm}) = &\left\|\operatorname{softmax}\!\left(
+\frac{W^Q(x^{harm})W^{kT}(x^{harm})-\Delta(x^{harm})}{\sqrt{d}}
+\right)\right. \\
+&\left.-
+\operatorname{softmax}\!\left(
+\frac{W^Q(x^{harm})W^{KT}(x^{harm})}{\sqrt{d}}
+\right)\right\|_2
+\end{aligned}
+$}\]
+where
+\[\resizebox{\columnwidth}{!}{$\displaystyle
+    \Delta(x^{harm}) = W^Q(x^{harm}).\operatorname{resize}(l,1,d)
+\times
+W^K(x^{harm}).\operatorname{resize}(1,l,d)
+$}\]
+The collection of neurons important for safety satisfies: 
+\begin{equation*}
+    \mathcal{N}_{\mathrm{safe}} = \{\, N_i \mid N_i \geq \epsilon,\ \forall \textbf{x}^{harm} \in \textbf{X}^{harm} \,\}
+\end{equation*}
+\\
+Vector steering takes a vector, $\textbf{r}$, that represents a given behavior and adds it to the residual stream at a given layer, $l$:
+\begin{equation*}
+    h(x)^{(l)}_{steer} = h(x)^{(l)} + \textbf{r}^{(l)}
+\end{equation*}
+Vector ablation takes a unit-norm vector, $\hat{\textbf{r}}$, that represents a given behavior and removes the direction from the residual stream in every layer in the network:
+\begin{equation*}
+    h(x)_{abl} = h(x) - \hat{\textbf{r}}\hat{\textbf{r}}^Th(x)
+\end{equation*}
+To locate the vector that represents refusing harmful queries, for each layer, $l$, at each token position, $i$, we calculate the mean activations for harmful queries, $\boldsymbol{\mu}^{(l)}$, and for safe queries, $\boldsymbol{\nu}^{(l)}$, and find the difference:
+\begin{align*}
+    \boldsymbol{\mu}^{(l)}_i &= \frac{1}{|\textbf{X}^{harm}|} \sum_{\textbf{X}^{harm}}h(x^{harm}_i)^{(l)} \\
+    \boldsymbol{\nu}^{(l)}_i &= \frac{1}{|\textbf{X}^{safe}|} \sum_{\textbf{X}^{safe}}h(x^{safe}_i)^{(l)} \\
+    \textbf{r}^{(l)}_i &=  \boldsymbol{\mu}^{(l)}_i - \boldsymbol{\nu}^{(l)}_i
+\end{align*}
+This gives $I \times L$ candidate vectors, and we choose the best one by validating their ability to bypass refusal.
+
 \subsection{What would finding a safety mechanism entail?}
 \label{sec:entailments}
 The interventions we evaluate are advanced as evidence that safety has been
@@ -79,7 +139,7 @@ The geometric mean gives a ``no axis left behind'' property: any axis going to z
 collapses the score, so a method cannot buy a high $\SFS$ by trading a broken model for
 raw potency. Reporting the scalar always \emph{with} the vector follows HELM's
 multi-metric precedent \citep{liang2022helm}. Two variants appear in the ablation
-(\S\ref{sec:ablation}): $\SFS_{\text{prod}}=\Ppot\Qual\Sreason$ and the threat-oriented
+(\S\ref{sec:appendix-metric}): $\SFS_{\text{prod}}=\Ppot\Qual\Sreason$ and the threat-oriented
 $\SFS_{\text{covert}}=\Ppot\Qual(1-\Sreason)$. Figure~\ref{fig:schematic} summarises.
 
 \begin{figure}[t]

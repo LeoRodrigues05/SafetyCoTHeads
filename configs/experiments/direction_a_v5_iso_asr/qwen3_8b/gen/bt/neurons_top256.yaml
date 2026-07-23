@@ -17,7 +17,7 @@ decoding:
   do_sample: false
   seed: 0
   max_new_tokens: 1024
-batch_size: 2
+batch_size: 32
 output:
   dir: runs/direction_a_v5/qwen3_8b/gen/bt/neurons_top256/seed0
 chat_overrides:

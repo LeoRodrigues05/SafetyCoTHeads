@@ -183,9 +183,10 @@ def _gen_baseline(model_key, ref, model_cfg, matrix, dset_key, dset) -> dict:
     return cfg
 
 
-def _gen_ships(model_key, ref, model_cfg, matrix, dset_key, dset, k: int) -> dict:
-    a = matrix["ablations"]["ships"]
-    cfg = _gen_common(model_key, ref, model_cfg, matrix, f"ships_top{k}",
+def _gen_ships(model_key, ref, model_cfg, matrix, dset_key, dset, k: int,
+               *, ablation_key: str = "ships", cond_prefix: str = "ships_top") -> dict:
+    a = matrix["ablations"][ablation_key]
+    cfg = _gen_common(model_key, ref, model_cfg, matrix, f"{cond_prefix}{k}",
                        dset_key, dset)
     cfg["heads"] = {
         "source": "file",
@@ -200,9 +201,10 @@ def _gen_ships(model_key, ref, model_cfg, matrix, dset_key, dset, k: int) -> dic
     return cfg
 
 
-def _gen_neurons(model_key, ref, model_cfg, matrix, dset_key, dset, k: int) -> dict:
-    a = matrix["ablations"]["neurons"]
-    cfg = _gen_common(model_key, ref, model_cfg, matrix, f"neurons_top{k}",
+def _gen_neurons(model_key, ref, model_cfg, matrix, dset_key, dset, k: int,
+                  *, ablation_key: str = "neurons", cond_prefix: str = "neurons_top") -> dict:
+    a = matrix["ablations"][ablation_key]
+    cfg = _gen_common(model_key, ref, model_cfg, matrix, f"{cond_prefix}{k}",
                        dset_key, dset)
     cfg["neurons"] = {
         "source": "file",
@@ -215,20 +217,24 @@ def _gen_neurons(model_key, ref, model_cfg, matrix, dset_key, dset, k: int) -> d
 
 
 def _gen_steering(model_key, ref, model_cfg, matrix, dset_key, dset,
-                   alpha: float) -> dict:
-    a = matrix["ablations"]["steering"]
+                   alpha: float, *, ablation_key: str = "steering",
+                   cond_prefix: str = "steering_a") -> dict:
+    a = matrix["ablations"][ablation_key]
     cfg = _gen_common(model_key, ref, model_cfg, matrix,
-                       f"steering_a{alpha}", dset_key, dset)
+                       f"{cond_prefix}{alpha}", dset_key, dset)
     # Dose sweep uses `mode` (default activation-addition). add applies
     # h + alpha*v with v = mean(harmful) - mean(benign); `add_alpha_sign`
     # (default -1) makes positive doses SUPPRESS refusal (induce harm), so the
-    # stored alpha = dose * sign. ablate would ignore alpha entirely.
+    # stored alpha = dose * sign. ablate would ignore alpha entirely. The
+    # `steering_defend` block (Experiment 5) sets add_alpha_sign=+1.0 so
+    # positive doses INDUCE refusal / harden instead.
     mode = a.get("mode", "add")
     eff_alpha = float(alpha)
     if mode == "add":
         # The direction is unit-normalised at apply time, so eff_alpha is the
         # ABSOLUTE perturbation magnitude (comparable across models). dose *
-        # add_coeff sets the scale; add_alpha_sign (-1) suppresses refusal.
+        # add_coeff sets the scale; add_alpha_sign picks suppress (-1) vs
+        # defend (+1).
         eff_alpha *= float(a.get("add_alpha_sign", -1.0)) * float(a.get("add_coeff", 1.0))
     cfg["steering"] = {
         "direction_path": _direction_path(model_key, model_cfg),
@@ -236,6 +242,15 @@ def _gen_steering(model_key, ref, model_cfg, matrix, dset_key, dset,
         "mode": mode,
         "alpha": eff_alpha,
     }
+    return cfg
+
+
+def _gen_system_prompt_condition(model_key, ref, model_cfg, matrix, dset_key,
+                                  dset, cond: str, system_prompt: str) -> dict:
+    """Pure generation-time system-prompt condition (no internal
+    intervention) — e.g. Experiment 5's `defend_prompt`."""
+    cfg = _gen_common(model_key, ref, model_cfg, matrix, cond, dset_key, dset)
+    cfg["system_prompt"] = system_prompt
     return cfg
 
 
@@ -314,26 +329,66 @@ def expand_one_model(model_key: str, model_cfg: dict, matrix: dict,
         _write(ddir / "baseline.yaml",
                _gen_baseline(model_key, ref, model_cfg, matrix, dkey, dset))
         written.append(ddir / "baseline.yaml")
-        for k in matrix["ablations"]["ships"]["top_k"]:
-            p = ddir / f"ships_top{k}.yaml"
-            _write(p, _gen_ships(model_key, ref, model_cfg, matrix,
-                                  dkey, dset, k))
-            written.append(p)
-        for k in matrix["ablations"]["neurons"]["top_k"]:
-            p = ddir / f"neurons_top{k}.yaml"
-            _write(p, _gen_neurons(model_key, ref, model_cfg, matrix,
-                                    dkey, dset, k))
-            written.append(p)
-        for a in matrix["ablations"]["steering"]["alpha"]:
-            p = ddir / f"steering_a{a}.yaml"
-            _write(p, _gen_steering(model_key, ref, model_cfg, matrix,
-                                     dkey, dset, a))
-            written.append(p)
-        ablate_name = matrix["ablations"]["steering"].get("ablate_condition")
-        if ablate_name:
-            p = ddir / f"{ablate_name}.yaml"
-            _write(p, _gen_steering_ablate(model_key, ref, model_cfg, matrix,
-                                            dkey, dset, ablate_name))
+
+        # Attack-side families (SHIPS/neuron ablation, steering-suppress):
+        # only on the harmful-prompt datasets (jbb/bt) — NOT on xstest, whose
+        # sole purpose is the Experiment 5 over-refusal probe (defence-side).
+        if dkey != "xstest":
+            for k in matrix["ablations"]["ships"]["top_k"]:
+                p = ddir / f"ships_top{k}.yaml"
+                _write(p, _gen_ships(model_key, ref, model_cfg, matrix,
+                                      dkey, dset, k))
+                written.append(p)
+            for k in matrix["ablations"]["neurons"]["top_k"]:
+                p = ddir / f"neurons_top{k}.yaml"
+                _write(p, _gen_neurons(model_key, ref, model_cfg, matrix,
+                                        dkey, dset, k))
+                written.append(p)
+            for a in matrix["ablations"]["steering"]["alpha"]:
+                p = ddir / f"steering_a{a}.yaml"
+                _write(p, _gen_steering(model_key, ref, model_cfg, matrix,
+                                         dkey, dset, a))
+                written.append(p)
+            ablate_name = matrix["ablations"]["steering"].get("ablate_condition")
+            if ablate_name:
+                p = ddir / f"{ablate_name}.yaml"
+                _write(p, _gen_steering_ablate(model_key, ref, model_cfg, matrix,
+                                                dkey, dset, ablate_name))
+                written.append(p)
+
+        # Defence-side families (Experiment 5): on EVERY dataset — jbb/bt for
+        # harm-reduction (P-defense), xstest for over-refusal cost. Same
+        # discovery artifacts as the attack side, reverse sign / amplified
+        # scale_factor.
+        if "heads_amplify" in matrix["ablations"]:
+            for k in matrix["ablations"]["heads_amplify"]["top_k"]:
+                p = ddir / f"heads_amplify_top{k}.yaml"
+                _write(p, _gen_ships(model_key, ref, model_cfg, matrix,
+                                      dkey, dset, k,
+                                      ablation_key="heads_amplify",
+                                      cond_prefix="heads_amplify_top"))
+                written.append(p)
+        if "neurons_amplify" in matrix["ablations"]:
+            for k in matrix["ablations"]["neurons_amplify"]["top_k"]:
+                p = ddir / f"neurons_amplify_top{k}.yaml"
+                _write(p, _gen_neurons(model_key, ref, model_cfg, matrix,
+                                        dkey, dset, k,
+                                        ablation_key="neurons_amplify",
+                                        cond_prefix="neurons_amplify_top"))
+                written.append(p)
+        if "steering_defend" in matrix["ablations"]:
+            for a in matrix["ablations"]["steering_defend"]["alpha"]:
+                p = ddir / f"steering_defend_a{a}.yaml"
+                _write(p, _gen_steering(model_key, ref, model_cfg, matrix,
+                                         dkey, dset, a,
+                                         ablation_key="steering_defend",
+                                         cond_prefix="steering_defend_a"))
+                written.append(p)
+        if matrix.get("defend_prompt"):
+            p = ddir / "defend_prompt.yaml"
+            _write(p, _gen_system_prompt_condition(
+                model_key, ref, model_cfg, matrix, dkey, dset,
+                "defend_prompt", matrix["defend_prompt"]))
             written.append(p)
 
     # judge

@@ -38,9 +38,9 @@
 % Colour (needed for the draft-note commands below).
 \usepackage{xcolor}
 
-% Diagrams (metric schematic, Fig. 2).
+% TikZ (metric schematic figure, \S\ref{sec:composite}).
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds}
+\usetikzlibrary{arrows.meta}
 
 % If the title and author information does not fit in the area allocated,
 % uncomment the following and set <dim> to something 5cm or larger.
@@ -56,6 +56,8 @@
 \newcommand{\Sreason}{S}                 % Safety-Reasoning axis
 \newcommand{\gapm}{\mathrm{gap}}         % CoT-monitorability gap
 \newcommand{\clip}{\operatorname{clip}}
+\newcommand{\model}[1]{\textsf{#1}}
+\newcommand{\condition}[1]{\texttt{#1}}
 
 % ---------------------------------------------------------------------------
 % Draft notes. Hide these (redefine to {}) for submission.
@@ -84,10 +86,10 @@
 \input{01intro}
 \input{02related}
 \input{03prelim}
-\input{04findings}
+\input{04afindings}
+\input{04bfindings}
 \input{05discussion}
 \input{06conclusion}
-\input{07limitations}
 \input{08acknowledgments}
 
 % Custom bibliography entries only. To include the ACL Anthology as well, use

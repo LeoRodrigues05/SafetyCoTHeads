@@ -11,6 +11,8 @@ changes:
   runs/pqs_pareto_frontier_report.html    clean P-vs-R Pareto view + frontier table
 
   runs/plots/composite_01_steering_dose_response.png
+  runs/plots/composite_09_family_dose_response.png
+  runs/plots/composite_10_dose_response_compact.png
   runs/plots/composite_02_family_mean_sfs.png
   runs/plots/composite_03_raw_asr_vs_sfs.png
   runs/plots/composite_04_model_family_sfs_heatmap.png
@@ -69,6 +71,20 @@ MODEL_COLOR = {m: c for m, c in zip(MODEL_ORDER, plt.get_cmap("tab10").colors)}
 STEER_DOSES = ["steering_a0.5", "steering_a1.0", "steering_a1.5", "steering_ablate"]
 DOSE_LABEL = {"steering_a0.5": "a0.5", "steering_a1.0": "a1.0",
               "steering_a1.5": "a1.5", "steering_ablate": "ablate"}
+
+# Dose ladders for every intervention family that has a monotone strength knob.
+# Each entry is (condition, x-tick label), ordered weakest -> strongest.  Steering
+# sweeps the add-coefficient alpha; SHIPS/Neuron sweep the top-k budget.
+# (Directional ablation is a single-point family with no dose knob, so it is
+#  excluded from the dose-response view.)
+FAMILY_DOSES = {
+    "Steering": [("steering_a0.5", "a0.5"), ("steering_a1.0", "a1.0"),
+                 ("steering_a1.5", "a1.5")],
+    "SHIPS (heads)": [("ships_top3", "top3"), ("ships_top5", "top5"),
+                      ("ships_top8", "top8")],
+    "Neuron": [("neurons_top256", "top256"), ("neurons_top512", "top512"),
+               ("neurons_top1024", "top1024")],
+}
 
 # thresholds shared by the diagnostics cards and tables
 RAW_HIGH = 0.60      # raw HAC above this with P below P_LOW = raw-ASR false positive
@@ -165,6 +181,104 @@ def plot_dose_response(pooled: list[dict], plots_dir: Path) -> None:
     fig.suptitle("Composite Steering Dose Response (dataset mean)",
                  fontweight="bold", fontsize=15)
     _save(fig, plots_dir, "composite_01_steering_dose_response")
+
+
+def plot_all_family_dose_response(pooled: list[dict], plots_dir: Path) -> None:
+    """Dose-response for every doseable family (Steering / SHIPS heads / Neuron),
+    not just steering.  Rows = axis (P, Q, S, SFS); columns = family; one line per
+    model against that family's strength ladder.  Companion to composite_01."""
+    by = {(p["model"], p["condition"]): p for p in pooled}
+    fams = list(FAMILY_DOSES)
+    panels = [("P", "Potency P"), ("Q", "Quality Q"),
+              ("S", "Safety-reasoning S"), ("sfs", "SFS")]
+    fig, axes = plt.subplots(len(panels), len(fams),
+                             figsize=(4.3 * len(fams), 3.0 * len(panels)),
+                             sharey="row")
+    for r, (key, row_title) in enumerate(panels):
+        for col, fam in enumerate(fams):
+            ax = axes[r, col]
+            ladder = FAMILY_DOSES[fam]
+            x = np.arange(len(ladder))
+            for m in MODEL_ORDER:
+                ys = [by.get((m, cond), {}).get(key) for cond, _ in ladder]
+                if all(y is None for y in ys):
+                    continue
+                ax.plot(x, ys, marker="o", color=MODEL_COLOR[m], label=_disp(m))
+            ax.set_ylim(-0.02, 1.02)
+            ax.set_xticks(x, [lab for _, lab in ladder])
+            ax.grid(alpha=.3, axis="y")
+            if r == 0:
+                ax.set_title(fam, fontweight="bold")
+            if col == 0:
+                ax.set_ylabel(row_title, fontweight="bold")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=len(labels),
+               fontsize=9, bbox_to_anchor=(0.5, 0.965))
+    fig.suptitle("Composite Dose Response Across Intervention Families "
+                 "(dataset mean)", fontweight="bold", fontsize=15, y=0.995)
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
+    _save(fig, plots_dir, "composite_09_family_dose_response")
+
+
+def plot_compact_dose_response(pooled: list[dict], plots_dir: Path) -> None:
+    """Compressed dose-response: the 12-panel composite_09 collapsed to the two
+    axes that actually move.  Q and S sit near the ceiling (retained), so we show
+    only Potency P (where the dose-response and family separation live) and the
+    SFS verdict.  All three families share one x-axis, split into grouped blocks
+    with dividers; each model's line is drawn as a separate segment per family so
+    nothing implies continuity across the family boundaries."""
+    by = {(p["model"], p["condition"]): p for p in pooled}
+    fams = list(FAMILY_DOSES)
+    # grouped x positions: 3 points per family, an extra gap between families.
+    gap = 1.2
+    xpos: dict[str, list[float]] = {}
+    ticks: list[float] = []
+    ticklabels: list[str] = []
+    centers: list[float] = []
+    cursor = 0.0
+    dividers: list[float] = []
+    for i, fam in enumerate(fams):
+        n = len(FAMILY_DOSES[fam])
+        xs = [cursor + j for j in range(n)]
+        xpos[fam] = xs
+        ticks.extend(xs)
+        ticklabels.extend(lab for _, lab in FAMILY_DOSES[fam])
+        centers.append(float(np.mean(xs)))
+        cursor += n - 1
+        if i < len(fams) - 1:
+            dividers.append(cursor + gap / 2)
+        cursor += gap
+
+    panels = [("P", "Potency P"), ("sfs", "SFS")]
+    fig, axes = plt.subplots(len(panels), 1, figsize=(9, 6.4), sharex=True)
+    for ax, (key, title) in zip(axes, panels):
+        for d in dividers:
+            ax.axvline(d, color="0.8", lw=1, zorder=0)
+        for m in MODEL_ORDER:
+            first = True
+            for fam in fams:
+                xs = xpos[fam]
+                ys = [by.get((m, cond), {}).get(key)
+                      for cond, _ in FAMILY_DOSES[fam]]
+                if all(y is None for y in ys):
+                    continue
+                ax.plot(xs, ys, marker="o", ms=5, color=MODEL_COLOR[m],
+                        label=_disp(m) if first else None)
+                first = False
+        ax.set_ylabel(title, fontweight="bold")
+        ax.set_ylim(-0.02, 1.02)
+        ax.grid(alpha=.3, axis="y")
+    axes[-1].set_xticks(ticks, ticklabels, fontsize=9)
+    # family band labels above the top panel
+    for fam, cx in zip(fams, centers):
+        axes[0].text(cx, 1.06, fam, ha="center", va="bottom",
+                     fontweight="bold", fontsize=11,
+                     transform=axes[0].get_xaxis_transform())
+    axes[0].legend(fontsize=8, ncol=2, loc="upper right")
+    fig.suptitle("Dose Response Across Intervention Families (dataset mean)",
+                 fontweight="bold", fontsize=14, y=1.02)
+    fig.tight_layout()
+    _save(fig, plots_dir, "composite_10_dose_response_compact")
 
 
 def plot_family_bars(cells: list[dict], plots_dir: Path) -> None:
@@ -517,6 +631,8 @@ def build_metrics_report(cells: list[dict], pooled: list[dict]) -> str:
         f'<div><h3>{html.escape(t)}</h3><img src="plots/{n}.png" alt="{html.escape(t)}"></div>'
         for n, t in [
             ("composite_01_steering_dose_response", "Composite steering dose response"),
+            ("composite_09_family_dose_response", "Dose response across all families"),
+            ("composite_10_dose_response_compact", "Dose response (compact: P + SFS)"),
             ("composite_02_family_mean_sfs", "Family mean SFS"),
             ("composite_03_raw_asr_vs_sfs", "Raw ASR vs SFS"),
             ("composite_04_model_family_sfs_heatmap", "Model-family heatmap"),
@@ -655,6 +771,8 @@ def main() -> int:
     print(f"loaded {len(cells)} cells "
           f"({len({c['model'] for c in cells})} models) from {args.csv}")
     plot_dose_response(pooled, plots_dir)
+    plot_all_family_dose_response(pooled, plots_dir)
+    plot_compact_dose_response(pooled, plots_dir)
     plot_family_bars(cells, plots_dir)
     plot_raw_vs_sfs(cells, plots_dir)
     plot_model_family_heatmap(cells, plots_dir)

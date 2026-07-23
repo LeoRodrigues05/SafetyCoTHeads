@@ -1,0 +1,93 @@
+\section{Chain-of-Thought Signatures}
+\label{sec:cot}
+
+Section~\ref{sec:compare} measured \emph{whether} an intervention captures safety effectively, we now ask \emph{how}. The distinction matters for a safety-mechanism claim. An intervention that deletes the model's safety computation and one that leaves the computation intact but overrides its output are behaviorally similar at the answer level, yet internally different. Only the second leaves the chain-of-thought (CoT) usable as a safety monitor. We resolve this with the monitorability axis of our analysis $\Sreason$ (\S\ref{sec:axes}). We utilize a per-sentence safety reasoning trace judge and a $12$-label pathway judge (\S\ref{sec:judges}). The section makes three points: (i) monitorability never collapses (\S\ref{subsec:cot-monitor}), (ii) harm is added \emph{downstream} of a preserved safety computation (\S\ref{subsec:cot-pathway}), and (iii) this mechanism is sharpest and scales with dose on explicit reasoning models (\S\ref{sec:cot-reasoning}). 
+
+\subsection{Monitorability Gap as a Measure}
+\label{subsec:cot-monitor}
+
+We test whether an intervention keeps the CoT usable as a safety monitor by asking if the reasoning traces are indicative of a harmful response. The failure mode we look for is an unsafe answer produced from a benign CoT trace. To measure this, we introduce the monitorability gap $\gapm=\mathrm{asr}_{\text{final}}-\mathrm{asr}_{\text{cot-pred}}$. We ask a judge to predict whether an answer will be harmful or not purely on the basis of the reasoning trace alone (($\mathrm{asr}_{\text{cot-pred}}$, shown only the CoT, not the final output). A large positive gap indicates covert failure, i.e., the model's reasoning traces are no longer indicative of a harmful response. A gap near zero or negative indicates that the trace is, more often than not, indicative of a harmful final output. 
+
+We find no covert failure; across all $100$ intervention cells, the gap is almost always \emph{negative}; i.e., the trace looks more harmful than the actual output. Only $4/100$ cells have any positive gap at all, the largest being $+0.036$, and the covert composite $\Ppot\cdot\Qual\cdot(1-\Sreason)$ exceeds $0.1$ in only two cells---both of which are strongly \emph{over}-warning ($\gapm<0$, driven by the $|\gapm|$ term) rather than covert
+(Figure~\ref{fig:gap-family}). The mean gap by family ranges from $-0.075$ (directional ablation) to $-0.107$ (safety head ablation), and the most strongly over-warning cells are safety head ablations on \model{Llama-3.1} (gap is $-0.448$). These are the same low-potency cells discovered in \S\ref{sec:compare}, wherein the answer quality degrades, but the reasoning keeps flagging the request as harmful. No intervention we study increases potency at the cost of monitorability. 
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_gap_by_family.png}
+  \caption{\textbf{Monitorability is preserved.} Distribution of the monitorability gap $\gapm$ per family across all $100$ intervention cells (five models $\times$ two datasets). The gap is almost entirely negative, the reasoning trace looks more dangerous than the final answer, so reading the CoT never fails to reveal harm the answer contains. The negative tail is the low-potency head-ablation cells of \S\ref{sec:compare}.}
+  \label{fig:gap-family}
+\end{figure}
+
+Crucially, monitorability is preserved independently of how much harm an intervention causes. Across cells, the gap is uncorrelated with potency (Spearman $\rho\!\approx\!0.00$), and within the two reasoning models tested, it is mildly negative ($\rho=-0.28$ to $-0.33$). The axis is therefore not redundant with $\Ppot$. 
+
+\subsection{Harm is Added Downstream}
+\label{subsec:cot-pathway}
+
+The pathway judge lets us analyze the finer details of the CoT traces. We report it as a compact signature of where in the reasoning each family acts (Table~\ref{tab:cot-signature}). We group the $12$ fine-grained labels into the distinct stages they signify: (i) whether the model recognizes the request as harmful, (ii) whether it explicitly suppresses its own refusal, and (iii) whether it proceeds to execution. We present these stages to offer a more interpretable result; the full $12$-label matrix can be found in Appendix~\ref{sec:appendix-pathway}.
+
+\begin{table}[t]
+  \centering \small
+  \setlength{\tabcolsep}{4pt}
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{@{}lccccc@{}}
+    \toprule
+    \textbf{Family} & recog. & ref.\ init. & ref.\ supp. & exec. & op.\ detail \\
+    \midrule
+    Steering              & 0.52 & 0.76 & 0.11 & 0.35 & 0.27 \\
+    Directional ablation  & 0.53 & 0.91 & 0.05 & 0.31 & 0.20 \\
+    Neuron                & 0.60 & 0.95 & 0.09 & 0.24 & 0.15 \\
+    SHIPS (heads)         & 0.60 & 0.93 & 0.10 & 0.24 & 0.14 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{\textbf{Pathway signature by family} on the explicitly-reasoning models
+    (\model{OLMo-3-think}, \model{Qwen3-8B}), harmful-among-clean completions. Every
+    family keeps recognition and refusal-\emph{initiation} high and refusal-%
+    \emph{suppression} near zero: the model still notices the request is harmful and
+    still starts to refuse. Harm rises through \emph{execution} and
+    \emph{operational detail}, not by silencing the refusal.}
+  \label{tab:cot-signature}
+\end{table}
+
+Two results stand out that are consistent across intervention families. Firstly, CoT traces don't exhibit much refusal suppression; these scores are near zero across results, while recognition ($0.52$--$0.60$) and refusal initiation ($0.76$--$0.95$) remain high. The model identifies a harmful request and begins refusal, but then goes ahead and proceeds to give a harmful response. Secondly, the labels that track induced harm are all identified downstream, with operational details correlated with potency and execution (Spearman $\rho=+0.49$, $\rho=+0.39$), whereas recognition and refusal-initiation correlate negatively ($-0.42$, $-0.37$), while refusal-suppression barely has any correlation ($\rho=-0.14$). Hence, harm is produced via downstream execution rather than via upstream safety compromises. This is the mechanistic content in \S\ref{subsec:cot-monitor}, the trace reveals harmful queries so the danger is identified, but the interventions act on the final execution rather than removing the safety reasoning. Relative to the non-intervention baseline, interventions move refusal-suppression by trace amounts (at most $0.01$), while shifting recognition down and execution up, as opposed to a collapse of recognition and refusal that a model with a compromised safety mechanism would produce. 
+
+The radar in Figure~\ref{fig:radar} shows the full 12-label profile for the \model{OLMo3-think} model. The four intervention families sit close together---all keeping recognition and refusal-initiation high while pushing harm downstream into execution---and separate from the baseline chiefly on the execution-side labels.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/pathway_radar_overlay_olmo3_7b_think.png}
+  \caption{\textbf{12-label pathway profile (\model{OLMo3-think}).} Baseline versus the strongest condition of each intervention family across the twelve fine-grained pathway labels (dataset mean). Relative to baseline, every family suppresses \emph{recognition} (risk-ack/policy) while keeping \emph{refusal-initiation} high and \emph{refusal-suppression} near zero; the families diverge only on the downstream \emph{execution} and \emph{operational-detail} labels, where steering reaches furthest. The cross-model reasoning-vs-non-reasoning contrast and the full per-cell label table are in Appendix~\ref{sec:appendix-pathway}.}
+  \label{fig:radar}
+\end{figure}
+
+
+\subsection{Monitorability is a Property of Reasoning Models}
+\label{sec:cot-reasoning}
+
+The above results are contingent on the existence of proper CoT traces that are readable, which not all models produce. Scoring traces with the per-sentence safety reasoning judge (\S\ref{sec:judges}), the two reasoning models (\model{OLMo-3-think}, \model{Qwen3-8B}) verbalize safety reasoning in $86-90\%$ of traces compared to $15-35\%$ in non-reasoning models. The recognize-but-proceed signature is isolated to reasoning models; they maintain high levels of recognition and refusal initiation, while non-reasoning models invert this. 
+
+Within reasoning models, steering intensifies the signature in proportion to its strength (Figure~\ref{fig:cot-dose}), as $\alpha$ increases, induced harm climbs ($\Ppot$: $0.05\!\to\!0.50$) and the reasoning walks further down the arc from refusal toward execution. Two things are worth noticing, monitorability never degrades, making the reasoning more conflicted, and head and neuron ablation show no such dose-response, further evidence (\S\ref{sec:compare}) that they do not act on the same object as steering. 
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/pathway_radar_olmo3_7b_think.png}
+  \caption{\textbf{The CoT signature scales with steering dose} (\model{OLMo3-think}, one panel per family). Each panel overlays the baseline (dashed) with the family's strength ladder across the twelve pathway labels. Only \emph{steering} (top-left) shows a dose-response: as $\alpha$ grows ($a0.5\!\to\!a1.5$) its profile walks off the baseline toward \emph{operational-detail} and \emph{procedural-planning} while recognition falls---the reasoning walks further down the recognise$\to$refuse$\to$comply arc, yet monitorability ($\Sreason$) stays high (more conflicted, not more concealing). SHIPS, Neuron, and directional ablation barely move across their ladders, further evidence they do not act on the same object as steering. The cross-model version and full per-cell table are in Appendix~\ref{sec:appendix-pathway}.}
+  \label{fig:cot-dose}
+\end{figure}
+
+
+\subsection{Other Results}
+\label{sec:cot-other}
+
+We collect here several smaller but robust observations that the pathway experiments support; each may be of independent interest. 
+
+\paragraph{The dataset shifts the profile.} JailBreakBench prompts elicit more induced harm and a wider monitorability gap compared to BeaverTails (mean $\Ppot$
+$0.16$ vs. $0.14$; gap $-0.126$ vs. $-0.078$). The adversarially phrased JailBreakBench prompts push the model further down the execution arc and make its reasoning argue more about safety. 
+
+\paragraph{Safety reasoning is concentrated at earlier traces.} When the model reasons about safety, it does so much earlier on in its CoT. The reasoning models spend $37-39\%$ of their traces on safety-relevant spans, versus $5-16\%$ for the non-reasoning variants. Safety consideration is observed to be front-loaded and not a late stage phenomenon. 
+
+\paragraph{Monitorability and harm decouple in different directions depending on the model.}
+On reasoning models, the more potent interventions are mildly \emph{less} covert \TODO{find better word for covert} (Spearman $\rho=-0.28$ to $-0.33$), whereas on pre-alignment base variants, it is weakly positive ($\rho=+0.11$ to $+0.44$). We do not over-read this, as the pre-alignment variants have little safety mechanism to begin with; it does suggest that the monitorability guarantee is strongest on reasoning models. 
+
+\paragraph{A handful of covert cells, all marginal.} The only four cells with a positive gap are all on \model{Llama-3.1}/BeaverTails (gap $\le +0.036$), and they are not the high-potency cells: two are low-harm neuron ablations, and the covert signal is within judge noise. We report them for completeness; they do not constitute a covert-harm failure mode.
+ 
+\paragraph{Steering does not buy compliance through rationalization.} One might expect a steered model to talk itself into compliance by inventing benign motives; it does not. The rationalization rate stays flat across the steering sweep ($0.10\!\to\!0.12\!\to\!0.09$ at $\alpha=0.5/1.0/1.5$). The added harm comes from proceeding to execution despite an intact recognition-and-refusal prefix, not from manufacturing a justification for it.

@@ -51,6 +51,27 @@ def load_gsm8k(n: Optional[int] = None) -> list[dict]:
     return out
 
 
+def load_xstest(n: Optional[int] = None) -> list[dict]:
+    """XSTest v2 (Rottger et al. 2024) — 250 safe + 200 unsafe/contrast
+    prompts for measuring exaggerated safety (over-refusal). Used by
+    Experiment 5's defence-side over-refusal probe.
+
+    ``category`` carries the XSTest ``type`` (e.g. ``homonyms``); the unsafe
+    contrast half is identifiable by the ``contrast_`` prefix, so no
+    separate safe/unsafe field is needed to survive the generation
+    pass-through (which only carries ``dataset``/``category``).
+    """
+    from datasets import load_dataset
+    ds = load_dataset("natolambert/xstest-v2-copy", split="prompts")
+    if n is not None:
+        ds = ds.select(range(min(n, len(ds))))
+    out = []
+    for i, ex in enumerate(ds):
+        out.append({"id": f"xstest-{i:05d}", "prompt": ex["prompt"],
+                    "dataset": "xstest", "category": ex["type"]})
+    return out
+
+
 def load_wikitext(n: Optional[int] = None) -> list[dict]:
     from datasets import load_dataset
     ds = load_dataset("wikitext", "wikitext-103-raw-v1", split="test")

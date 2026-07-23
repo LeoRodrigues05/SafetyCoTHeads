@@ -1,0 +1,68 @@
+# Direction A v6 — explicit paper-scope configuration.
+#
+# Inferred from the model sets actually present on disk under
+# runs/direction_a_v5/ (audited 2026-07-22). The v5 experiment matrix,
+# README, and paper directory do NOT all list identical model sets, so this
+# file is the single authoritative scope for v6 aggregation. Exploratory
+# models are reported separately and are NEVER pooled into primary paper
+# averages.
+#
+# `primary`     : models that appear in the paper's headline (P, Q, S) tables.
+# `exploratory` : models reported in appendices / separate views only.
+#
+# `explicit_trace_models` : subset of models whose completions carry an
+#   explicit <think>...</think> reasoning block (closing tag may be present
+#   without an opening tag because some chat templates pre-fill "<think>" in
+#   the rendered prompt). Only these contribute to PRIMARY monitorability
+#   (paired U/O/A/FNR/S) aggregation.
+#
+# `prose_prefix_models` : models that emit no explicit trace tags. For these an
+#   "early-response prefix" (all sentences except the last) may be used ONLY as
+#   a monitorability *sensitivity* signal, labelled `prefix`. It is never called
+#   chain-of-thought and never pooled with explicit-trace results.
+
+primary:
+  - qwen3_8b
+  - olmo3_7b_think
+  - olmo3_7b_base
+  - olmo3_7b_base_own
+  - llama31_8b_control
+
+exploratory:
+  - r1_distill_qwen_7b
+
+explicit_trace_models:
+  - qwen3_8b
+  - olmo3_7b_think
+  - olmo3_7b_base
+  - olmo3_7b_base_own
+  - r1_distill_qwen_7b
+
+prose_prefix_models:
+  - llama31_8b_control
+
+# Datasets carried into primary answer-safety / monitorability reporting.
+# xstest is an over-refusal probe (benign prompts) and is reported separately.
+primary_datasets:
+  - jbb          # JailbreakBench
+  - bt           # BeaverTails
+sensitivity_datasets:
+  - xstest
+
+# Baseline condition name (per model, per dataset) used for P/Q/S correction.
+baseline_condition: baseline
+
+# Expected prompt counts per dataset (verified against baseline cells in audit;
+# `null` means "infer from the baseline cell rather than assert").
+expected_prompt_counts:
+  jbb: null
+  bt: null
+  xstest: null
+
+notes: >
+  Model set inferred from runs/direction_a_v5 disk contents on 2026-07-22.
+  r1_distill_qwen_7b has explicit traces but is EXPLORATORY: its monitorability
+  is reported in the explicit-trace *appendix* view, not the primary paper
+  aggregate. llama31_8b_control is prose-only: it appears in primary
+  answer-level (P, Q) reporting but its monitorability appears only in the
+  prose-prefix sensitivity view.

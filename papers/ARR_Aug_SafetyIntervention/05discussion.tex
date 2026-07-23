@@ -5,6 +5,62 @@
 \section{Discussion}
 \label{sec:discussion}
 
+\paragraph{The measurement problem is not specific to the four intervention methods.}
+The sharpest practical finding of \S\ref{sec:compare} is that a raw attack success rate re-ranks interventions and over credits already unsafe models. Any white-box intervention evaluated with an absolute rate inherits its model's baseline harm, and the cheap correction provided with our potency $\Ppot$ metric alleviates this issue. We encourage intervention papers to report baseline-corrected potency alongside a coherence or quality axis by default, independent of whether the composite metric is adopted. Together, this makes intervention results across models and papers comparable. 
+
+\paragraph{Most localizations do not localize behaviorally.}
+At matched strength, the direction-based interventions leave the signature of a removed safety mechanism, i.e., they induce coherent harm without any loss of coherence. The safety head and neuron interventions are not indicative of this; removing the components they identify changes little. Our falsification claim supports this: a discovery of safety artifacts in a model with no safety training returns confident targets, the removal of which induces effectively no harm. We are correspondingly careful about what a high score licenses. A potent, selective, monitorable intervention behaves as if it found a safety mechanism, necessary but not sufficient.
+
+\paragraph{Where the safety computation appears to sit.} 
+The chain-of-thought results (\S\ref{sec:cot}) indicate that across families, the intervention leaves recognition and refusal initiation near baseline while raising execution and operational detail; the labels that move with induced harm are the downstream ones, and explicit refusal-suppression barely moves. These interventions therefore override the safety mechanism's effect on the \emph{output} rather than deleting the upstream computation that recognizes harm and begins to refuse. That the direction methods succeed where component-ablation fails fits the same picture: safety behavior here looks more like a recoverable direction acted on late than a small set of components whose removal erases it.
+
+\paragraph{Good news for chain-of-thought monitoring, with an expiry condition.} The
+monitorability result is, for once, reassuring: none of these interventions buys
+potency by hiding harm from the trace. Even at the strongest steering dose, the
+reasoning stays at least as revealing as the answer---more conflicted, not more
+concealing---so an auditor reading the chain-of-thought would still catch the harm.
+This is direct evidence for the premise of the CoT-monitoring agenda
+\citep{baker2025cotmonitoring, korbak2025monitorability}: against this class of
+white-box suppression, monitoring the reasoning is robust. The caveat is that the
+guaranty belongs to models that \emph{externalize} their reasoning---it held on the
+two explicitly-reasoning models and had little to grip on the others, whose traces
+rarely verbalize safety. As models move toward shorter or more latent reasoning, the
+monitorable surface these interventions leave intact may cease to exist, and the
+positive result would not transfer. Monitorability is worth measuring precisely
+because it is contingent.
+ 
+\paragraph{Limitations.}
+\label{sec:limitations}
+Several caveats bound these claims. Our selectivity axis
+measures coherence rather than capability, so an intervention that remains fluent while
+undermining task competence would score better than it deserves; extending $\Qual$
+with a benign-utility delta is the most important open improvement to the metric. The
+axes rest on LLM judges validated against human annotation, with moderate agreement
+on the labels driving the headline axes and near-chance agreement on two auxiliary
+and three fine-grained labels that we therefore exclude from every axis; in
+particular, the monitorability result depends on a CoT-only predictor with moderate
+agreement, so it is best read as no covert failure \emph{detectable at this
+reliability}. The grid consists of five 7--8B dense, text-only models evaluated at a single
+seed with inference-time interventions only: the axes are scale-free by construction,
+but the family ordering is not yet verified at a larger scale, on
+mixture-of-experts or multi-modal models, or against fine-tuning-based methods, and
+our intervals are bootstrapped over prompts rather than over generations. Finally, the
+two pre-alignment \model{OLMo-3-base} arms are controls on whether a mechanism exists
+to find one, not a faithfulness comparison between methods.
+ 
+\paragraph{Future work.} The most direct next test of a localization claim follows
+from the metric being orientation-agnostic: a genuine safety direction should be
+drivable \emph{both} ways, so an intervention that weakens safety when removed should
+harden it when added, an experiment that the same three axes score by flipping the sign of
+$\Ppot$. Three further directions matter. Whether the monitorability guarantee
+survives models with compressed or latent reasoning is, by the argument above, the
+question that decides how far our positive CoT result generalizes. The quality axis
+should be extended from coherence to benign-utility retention, so that selectivity is
+measured against capability and not only fluency. Model resilience, which refers to how much harm
+the most effective known intervention extracts, varies substantially across our
+models and is not predicted by baseline safety. It is worth tracking as a comparable
+alignment-robustness property as training recipes change.
+
 % ---- ¶1 (What the metric buys future work): decomposing "removes safety" into P,Q,S
 %      and baseline-correcting each gives a comparable, reusable number that survives
 %      porting across models whose base safety differs. The (P,Q,S) vector + Pareto
@@ -40,5 +96,3 @@
 % ---- ¶4 (Scope / what generalises): 7--8B here; the axes and baseline-correction are
 %      scale-free by construction; generalising beyond suppressive interventions and
 %      beyond 8B is future work (forward-ref Limitations).
-
-\TODO{Discussion is outline-only. Write ¶1--¶4.}

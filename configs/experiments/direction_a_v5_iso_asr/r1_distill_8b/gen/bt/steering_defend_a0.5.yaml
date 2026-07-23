@@ -1,0 +1,27 @@
+tracker:
+  experiment: direction_a_v5
+  run: steering_defend_a0.5_r1_distill_8b_bt
+  status: runnable
+seed: 0
+condition: steering_defend_a0.5
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: 7
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 2
+output:
+  dir: runs/direction_a_v5/r1_distill_8b/gen/bt/steering_defend_a0.5/seed0
+steering:
+  direction_path: runs/direction_a_v5/r1_distill_8b/17-direction-extraction/refusal_directions.npz
+  layer: 14
+  mode: add
+  alpha: 4.0

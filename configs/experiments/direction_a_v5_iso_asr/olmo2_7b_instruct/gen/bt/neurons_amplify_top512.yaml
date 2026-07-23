@@ -1,0 +1,28 @@
+tracker:
+  experiment: direction_a_v5
+  run: neurons_amplify_top512_olmo2_7b_instruct_bt
+  status: runnable
+seed: 0
+condition: neurons_amplify_top512
+model:
+  name: allenai/OLMo-2-1124-7B-Instruct
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: beavertails
+  categories: null
+  n_per_category: 7
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 512
+batch_size: 4
+output:
+  dir: runs/direction_a_v5/olmo2_7b_instruct/gen/bt/neurons_amplify_top512/seed0
+neurons:
+  source: file
+  path: runs/direction_a_v5/olmo2_7b_instruct/16-neuron-discovery/neuron_ranking.json
+  top_k: 512
+  mask_type: scale_mask
+  scale_factor: 3.0

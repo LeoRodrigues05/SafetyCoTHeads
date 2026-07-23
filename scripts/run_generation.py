@@ -16,7 +16,7 @@ from safety_cot_heads.attribution import (
 )
 from safety_cot_heads.data import (
     load_alpaca, load_beavertails, load_jailbreakbench,
-    load_maliciousinstruct,
+    load_maliciousinstruct, load_xstest,
 )
 from safety_cot_heads.generation import DecodingConfig, generate
 from safety_cot_heads.interventions import (
@@ -35,6 +35,7 @@ def _load_dataset(name: str, n: int | None, **kw):
     if name == "maliciousinstruct": return load_maliciousinstruct(n=n)
     if name == "jailbreakbench":    return load_jailbreakbench(n=n)
     if name == "alpaca":            return load_alpaca(n=n)
+    if name == "xstest":            return load_xstest(n=n)
     if name == "beavertails":
         return load_beavertails(
             categories=kw.get("categories"),

@@ -8,6 +8,9 @@ from .composite import (
 )
 from .dose_response import dose_curve
 from .metrics import asr, harmful_rate, quality_score, refusal_rate, wilson_ci
+from .over_refusal import (
+    OverRefusalScores, compute_over_refusal, over_refusal_by_condition,
+)
 from .overlap import head_set, jaccard, overlap_report, safety_excluding
 from .paired import (
     PairedResult, PairedScoreResult,
@@ -37,4 +40,5 @@ __all__ = [
     "harmful_among_coherent", "harmful_among_coherent_scored",
     "per_category_breakdown", "per_category_score_breakdown",
     "parse_status_counts",
+    "OverRefusalScores", "compute_over_refusal", "over_refusal_by_condition",
 ]

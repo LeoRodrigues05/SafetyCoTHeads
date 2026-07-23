@@ -44,3 +44,17 @@ dist/
 # Large local artifacts (model weights, fine-tune datasets)
 models/
 data/pathway_judge_*.jsonl
+
+# Archives / packaged exports (e.g. paper submission bundles) — rebuild from source
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

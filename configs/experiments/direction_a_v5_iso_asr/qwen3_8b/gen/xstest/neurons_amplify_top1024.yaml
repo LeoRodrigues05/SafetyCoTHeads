@@ -1,0 +1,29 @@
+tracker:
+  experiment: direction_a_v5
+  run: neurons_amplify_top1024_qwen3_8b_xstest
+  status: runnable
+seed: 0
+condition: neurons_amplify_top1024
+model:
+  name: Qwen/Qwen3-8B
+  dtype: bfloat16
+  attn_implementation: eager
+dataset:
+  name: xstest
+  n: null
+decoding:
+  temperature: 0.0
+  do_sample: false
+  seed: 0
+  max_new_tokens: 1024
+batch_size: 32
+output:
+  dir: runs/direction_a_v5/qwen3_8b/gen/xstest/neurons_amplify_top1024/seed0
+chat_overrides:
+  enable_thinking: true
+neurons:
+  source: file
+  path: runs/direction_a_v5/qwen3_8b/16-neuron-discovery/neuron_ranking.json
+  top_k: 1024
+  mask_type: scale_mask
+  scale_factor: 3.0

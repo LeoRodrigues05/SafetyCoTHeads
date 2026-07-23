@@ -1,6 +1,30 @@
 \section{Introduction}
 \label{sec:intro}
+With the spread of AI-technologies having LLMs as a backbone, concerns about the potential harm these models might cause have grown. Modern LLMs are \textit{safety-aligned}, using human feedback and optimization methods to teach the model to generate safe responses and refuse to answer harmful queries. However, studies on \textit{jailbreaking} show that vulnerabilities in safety-aligned LLMs can be exploited, making the model exhibit harmful behavior \citep{zhao2026hijacking, zou2023universal}.
+In a parallel line of work, methods from mechanistic interpretability (MI) are used to investigate the LLM's underlying computational processes when presented with potentially harmful queries. An important task is to locate which components of the computational process in the LLM are responsible for safety-related behavior—the so-called \textit{safety} mechanisms. 
+\\
+With this purpose, researchers have developed \textit{interventional methods} that change the LLMs' parameters and assess how responses are affected. Ablation-techniques are used to locate safety-relevant attention heads \citep{zhou2024ships} and neurons \citep{zhao2025neuron}, while \citep{arditi2024refusal} discovers directions in the activation-space responsible for refusing harmful requests, which can either be ablated or used for steering. 
+\\
+It is common practice to claim that an intervention localizes safety-mechanisms, supported by the Attack Success Rate (ASR) before and after the intervention. However, only reporting ASR does not faithfully reflect the ability to identify safety-mechanisms. As \citep{souly2024strongreject} argues, safety does not only entail the will to provide harmful responses but also the capability, and ASR risks confusing harmful behavior with a broken model. On the other hand, as \citep{zhao2026harmfulnessrefusal} points out, refusing to answer harmful queries is not the same as the LLM recognizing harm.
+In the same vein, \citep{baker2025cotmonitoring} shows that while models might obfuscate the potential harm in a response, the Chain-of-Thought (CoT) reveals safety concerns. As such, a change in harmful behavior should be observed in both reasoning and response.
+\\
+With this paper, we make 2 contributions: First of all, we propose a framework to standardize measuring the effect of safety-related interventions. We define the \textbf{Selective Failure Score} (SFS), a composite metric reflecting 3 axes necessary to claim that an intervention faithfully identifies safety-mechanisms: \textbf{Potency}, the intervention should effectively degrade safe behavior, \textbf{Quality}, the intervention should not degrade general language capabilities, and \textbf{Safety-reasoning} \textcolor{red}{correct? better name, maybe?}, the intervention effect on safety behavior should be reflected in the reasoning.
+Specifically, SFS captures the intervention's impact on safety \textit{behavior} and as such it is necessary, but not sufficient, to claim localization of safety-mechanisms.
+In addition to the metric, we fine-tune an LLM to decompose the reasoning for the generated responses, to analyse the effect interventions have on recognizing harm rather than refusal. 
+\\
+Secondly, we conduct a first-of-its-kind comparative study on how faithfully interventional methods locate safety-mechanisms in LLMs. Our experiments cover 5 LLMs with and without safety-alignment as well as non-reasoning and reasoning models across 2 datasets of harmful queries.
+\\
+Our work addresses the following research questions:
+\begin{itemize}
+    \item How does the effect of interventional methods on safety behavior compare to safety behavior in baseline models?
+    \item How do interventional methods compare in faithfully identifying safety-mechanisms across models?
+    \item How is reasoning affected by interventional methods and how is this reflected in safety behavior? 
+\end{itemize}
+\textcolor{red}{Something about findings/the 3 claims}
+\\
 
+
+\subsection{Legacy}
 A growing body of work claims to have found \emph{where safety lives} inside a language
 model---and offers as evidence an inference-time edit of that location. Safety-relevant
 attention heads are ablated \citep{zhou2024ships}, safety neurons zeroed, a single
@@ -65,7 +89,7 @@ coherence-gated ASR mis-ranks methods---Kendall's $\tau$ against the decomposed 
 falls as low as $0.73$. \textbf{(F2)}~Baseline-correction is essential on models whose
 base behaviour is not already safe: on an unsafe base model a raw leaderboard calls
 \emph{ten} interventions a ${\sim}70\%$ jailbreak, while corrected potency shows most add
-almost no harm (\S\ref{sec:f1f2}). \textbf{(F3)}~Coherence-gating separates ``removed
+almost no harm (\S\ref{subsec:c1}). \textbf{(F3)}~Coherence-gating separates ``removed
 safety'' from ``broke the model.'' \textbf{(F4)}~The four families separate cleanly once
 the score is decomposed: at matched strength, direction-based methods pass the
 mechanism signature while head- and neuron-level localizations largely fail
@@ -85,6 +109,6 @@ grid, and the human-validated judges.
     papers report ($x$) against our decomposed Selective-Failure Score ($y$). If ASR
     were sufficient the points would track the diagonal. Instead, vertical bands of cells
     with near-identical ASR span almost the full range of the decomposed score---the two
-    rankings disagree (Kendall $\tau$ down to $0.73$, \S\ref{sec:f1f2}).}
+    rankings disagree (Kendall $\tau$ down to $0.73$, \S\ref{subsec:c1}).}
   \label{fig:teaser}
 \end{figure}
