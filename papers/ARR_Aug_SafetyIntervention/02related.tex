@@ -12,23 +12,15 @@
 %      request succeed). StrongREJECT adds a quality-aware rubric. What they miss:
 %      no safety-reasoning / monitorability axis; mostly black-box, no intervention
 %      notion. This is the closest prior art to our Potency axis.
-\subsection{Attack evaluation}
-Several benchmarks have been proposed as a standard for LLM safety-evaluation.
-StrongReject \citep{souly2024strongreject}, HarmBench \citep{mazeika2024harmbench} and JailbreakBench \citep{chao2024jailbreakbench} (which we use) all provide small datasets of queries curated to be especially harmful, while BeaverTails \citep{ji2023beavertails} (which we use) provides a comprehensive set of QA-pairs with potentially harmful queries.
-
-HarmBench \citep{mazeika2024harmbench} and JailbreakBench \citep{chao2024jailbreakbench} report ASR using LLM-as-a-judge to classify if a response complies with the harmful query. StrongReject \citep{souly2024strongreject} also uses an LLM to classify compliance, but additionally asks to score if the response is specific and convincing and reports a metric composed of the 3. 
-
-While these benchmarks deal with model-safety, our metric evaluates the effect of intervention, comparing responses before and after.
-In the same vein as StrongReject, our metric reflects harmfulness and quality of responses, but adds monitorability as a factor, reflecting if the potential harm is verbalized in reasoning.
-
+\paragraph{Safety evaluation}
+Safety behavior in LLMs is commonly evaluated against specific benchmarks. HarmBench \citep{mazeika2024harmbench} and JailbreakBench \citep{chao2024jailbreakbench} report ASR using LLM-as-a-judge to classify whether a response complies with the harmful query. StrongReject \citep{souly2024strongreject} also uses an LLM to classify compliance, but additionally asks to score whether the response is specific and convincing, and reports a metric composed of the 3. Such composite metrics are in line with \citep{liang2023helm}, which argues that LLMs behavior consists of several characteristics and that LLMs should not be evaluated on a single axis. 
+\\
+While these benchmarks evaluate safety behavior in general, our metric measures the effect of interventions, comparing responses before and after.
+Inspired by StrongReject, our metric reflects harmfulness and quality of responses but adds monitorability as a factor, reflecting whether the potential harm is verbalized in reasoning. We report the vector along the 3 axes with a Pareto front and additionally define how these axes can be combined into a single number
 % ---- ¶2 (Safety-classifier judges): Llama-Guard-3, ShieldGemma, our 30B/14B judges.
 %      These are instrumentation (a better ASR), not a cross-method comparison
 %      framework. Position our judges as instruments *inside* the framework, validated.
-\subsection{Safety-classifier judges}
-To compute an ASR that is more general than refusal or harmful keywords, we are inspired by
-LlamaGuard-3 \citep{inan2023llamaguard} and ShieldGemma \citep{zeng2024shieldgemma} - LLMs specifically developed to classify potentially harmful in-/output in an effort to mitigate safety-issues. In addition, \citep{menke2025annotating} use the general-purpose Gemini 2.0-flash \textcolor{red}{cite} to classify safety-related reasoning.
 
-Our proposed framework uses general-purpose LLMs that we evaluate for the tasks. The LLMs as judges are integral parts of the Potency and Safety Reasoning axes. In addition, we fine-tune an LLM to classify safety-reasoning traces.
 
 % ---- ¶3 (White-box intervention methods --- what each REPORTS, and on what axis):
 %      safety-head attribution/ablation (SHIPS/Sahara, refusal-rate); directional
@@ -36,27 +28,22 @@ Our proposed framework uses general-purpose LLMs that we evaluate for the tasks.
 %      activation steering; DSH harmfulness/refusal axes (Wu et al.); learned circuit
 %      masks. Recurring gap: bespoke single-axis metrics, no shared quality or
 %      reasoning axis, no cross-method protocol. THIS is the gap we fill.
-\subsection{White-box intervention methods}
-The effect of intervention methods on safety is commonly reported using ASR as the single measurement. \citep{zhao2025neuron} report ASR using generation of specific harmful responses as a success-criteria, following \citep{zou2023universal}.
-\citep{zhou2024ships} reports ASR using the absence of refusal keywords as success-criteria. \citet{arditi2024refusal} also reports this, but in addition reports a score using an LLM to address potential incoherent responses. \citep{yu2026safeseek} reports ASR using  LlamaGuard3-8B to classify if an attack is successful.
+\paragraph{White-box intervention methods}
+Several methods investigate LLM safety by intervening on model parameters. Specifically, white-box methods control which parameters to change and therefore localize safety-mechanisms, attributing the change in safety behavior to the chosen parameters. \citep{zhou2024ships} locate safety-mechanisms in attention heads, \citep{zhao2025neuron} and \citep{yu2026safeseek} claim to find safety-mechanisms as a collection of neurons from attention and MLP-layers, \citep{arditi2024refusal} attribute safety behavior to vectors in the activation space, while \citep{li2025layers} identify layers of the LLM responsible for safety behavior. 
 
-We propose a standard protocol for measuring how ASR is affected by an intervention, reflected in the Potency-axis. Furthermore, our metric also encapsulates whether quality and reasoning are affected.
-
+\paragraph{Intervention evaluation}
+It is common practice to support the identification of safety-mechanisms by reporting ASR as the single measurement. \citep{zhao2025neuron} reports ASR using the generation of specific harmful responses as a success criterion, following \citep{zou2023universal}.
+\citep{zhou2024ships} reports ASR using the absence of refusal keywords as a success criterion. \citet{arditi2024refusal} also reports this but, in addition, it reports a score using an LLM to address potential incoherent responses. \citep{yu2026safeseek} reports ASR using  LlamaGuard3-8B to classify whether an attack is successful.
+\\
+This shows that there is no standard way to report how safety behavior is affected by interventions. In addition, reporting ASR overstates the harm caused by interventions, as incoherent responses count as harmful, there is no baseline-correction, and reasoning about safety is ignored. We propose a standard protocol that faithfully measures how ASR is affected by an intervention, which is reflected in the Potency-axis. Furthermore, our metric also encapsulates whether response-quality and reasoning are affected.
 % ---- ¶4 (CoT-monitoring agenda): OpenAI 2024 / Baker et al. --- the reasoning trace
 %      as a monitorable safety signal. Motivates our Safety-Reasoning axis; but it is
 %      not itself an intervention-comparison metric.
-\subsection{CoT-monitoring}
-\citep{baker2025cotmonitoring} shows that an LLM can be used to monitor the CoT for signals of harmful behavior that may not be caught in the answer. In the same vein, \citep{korbak2025monitorability} mentions that the reasoning LLMs use CoT in the same way as activations, and argues that monitoring reasoning is a valuable additional safety layer.
+\paragraph{CoT-monitoring}
+\citep{baker2025cotmonitoring} shows that an LLM can be used to monitor the CoT for signals of harmful behavior that may not be caught in the answer. In the same vein, \citep{korbak2025monitorability} mentions that reasoning LLMs use CoT in the same way as activations and argues that monitoring reasoning is a valuable additional safety layer.
 
-With the Safety-Reasoning axis we address whether an intervention affects harmful signals that can be monitored in the CoT.
+With the Safety-Reasoning axis, we address whether an intervention affects harmful signals that can be monitored in the CoT.
 
 % ---- ¶5 (Composite / multi-metric precedents we borrow from): HELM (multi-metric
 %      reporting is legitimate), StrongREJECT's quality-gated score, Arena/Elo ranking.
 %      These inform *how* we combine axes defensibly (geometric mean + Pareto, §3.2).
-\subsection{Composite metrics}
-\citep{liang2023helm} argues that several characteristics are desirable for LLM responses and so LLMs should not be evaluated on a single axis, but rather report multiple metrics. \citep{souly2024strongreject} provides a composite metric of safety, combining quality-gated responses with the intent to comply with harmful responses.
-
-Our metric consists of 3 axes that we find important for evaluating how effectively intervention methods locate safety mechanisms. We report the vector along the 3 axes with a Pareto front and additionally define how these axes can be combined into a single number
-
-\TODO{Related Work is outline-only. Replace with a cited survey once deep-research is
-run; do NOT cite specifics until custom.bib entries are verified.}

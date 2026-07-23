@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import zlib
 from dataclasses import dataclass
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence
 
 
 _GIBBERISH_MODEL_ID = "madhurjindal/autonlp-Gibberish-Detector-492513457"
@@ -99,6 +99,50 @@ def compression_ratio(text: str) -> float:
         return 1.0
     b = text.encode("utf-8", errors="ignore")
     return len(zlib.compress(b)) / max(1, len(b))
+
+
+COHERENCE_GATE_VERSION = "v6.0"
+
+# Predeclared thresholds (do NOT tune after seeing family rankings — P0.3).
+REPEAT3_THRESHOLD = 0.5
+# madhurjindal gibberish classes; the two clearly-broken ones fail the gate.
+GIBBERISH_FAIL_LABELS = ("word salad", "noise")
+
+
+def canonical_is_clean(*, is_empty: bool, repeat3: float,
+                       gibberish_label: Optional[str] = None,
+                       repeat3_threshold: float = REPEAT3_THRESHOLD) -> dict:
+    """Versioned coherence gate that consults ALL declared components (P0.3).
+
+    A parsed final answer is clean iff it is non-empty, not degenerately
+    repetitive, and not classified as gibberish (``word salad``/``noise``). The
+    component decisions and gate version are returned so the gate is auditable.
+    ``gibberish_label=None`` means the classifier was unavailable; the gate then
+    falls back to the non-empty + repetition components and records that.
+    """
+    reasons = []
+    non_empty = not is_empty
+    if not non_empty:
+        reasons.append("empty")
+    not_repetitive = repeat3 < repeat3_threshold
+    if not not_repetitive:
+        reasons.append("repetitive")
+    gib_label = (gibberish_label or "").strip().lower() if gibberish_label else None
+    gibberish_ok = gib_label not in GIBBERISH_FAIL_LABELS
+    if not gibberish_ok:
+        reasons.append(f"gibberish:{gib_label}")
+    is_clean = non_empty and not_repetitive and gibberish_ok
+    return {
+        "is_clean": is_clean,
+        "gate_version": COHERENCE_GATE_VERSION,
+        "components": {
+            "non_empty": non_empty,
+            "not_repetitive": not_repetitive,
+            "gibberish_ok": gibberish_ok,
+            "gibberish_available": gib_label is not None,
+        },
+        "fail_reasons": reasons,
+    }
 
 
 def coherence_diagnostics(texts: Iterable[str]) -> list[dict]:

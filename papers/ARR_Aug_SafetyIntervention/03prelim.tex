@@ -2,218 +2,98 @@
 \label{sec:prelim}
 
 \subsection{Interventional methods for locating safety mechanisms}
-Interventional methods from MI are designed to investigate the effect that the steps of the computational process in a model have on the final output. Interventional methods change model-parameters and interpret the effect of the parameters by assessing how outputs are affected by the intervention. Since it is infeasible to examine all possible combinations of parameters from modern LLMs, methods have been developed to locate the specific parameters of interest for a given behavior. We employ 3 methods that find components critical for safe behavior in LLMs: \textit{Safety Head ImPortance Score} (SHIPS) uses attention head ablation as the intervention \citep{zhou2024ships}, \textit{Safety Neuron Detection} (SND) uses neuron deactivation as the intervention \citep{zhao2025neuron}, and \textit{Refusal Direction Extraction} that uses vector steering and vector ablation as the intervention \citep{arditi2024refusal}. In the following, we will present each method as well as the interventions. First of all we have an LLM, $\mathcal{M}_{base}$ and an intervention on an LLM, $\text{intervention}(\mathcal{M}_{base}) = \mathcal{M}_{int}$, a set of potentially harmful queries, $\textbf{X}^{harm} = \{\textbf{x}_1^{harm},\textbf{x}_2^{harm},...,\textbf{x}_m^{harm}\}$ and a set of safe queries, $\textbf{X}^{safe} = \{\textbf{x}_1^{safe},\textbf{x}_2^{safe},...,\textbf{x}_m^{safe}\}$. $h(x)$ is the value in the residual stream at any given point.
-\\
-Attention head ablation removes the effect of an attention head, $head_i$, by multiplying the query-matrix, $W_i^Q$, with a small number, $\epsilon$:
-\begin{equation*}    
-    head_i^{int} = \text{softmax}(\frac{\epsilon W_i^QW_i^{KT}}{\sqrt{d/n}})W_i^V
-\end{equation*}
-To locate which attention heads are critical for safe behavior, we obtain $A(\mathcal{M},X_{harm})$, which is the matrix of activations from the last layer in $\mathcal{M}$, when processing $\textbf{X}_{harm}$. We then compute the SHIPS of each attention head:
-\begin{equation*}
-    SHIPS(A_{base},A_{int},head_i) = \sum_j^r \phi_j
-\end{equation*}
-where $\phi_j$ is the principal angle between the first $r$ columns of the left-singular matrix from $U_\mathcal{A_{harm}}$, and the left-singular matrix from, $U_{A_{int}}$. \textcolor{red}{not done yet...}
-\\
-To find a collection of heads that together has the greatest impact on safety, \citeauthor{zhou2024ships} defines the \textit{Safety Attention Head AttRibution Algorithm} (SAHARA), which takes an LLM, $\mathcal{M}$, a set of queries, $X$, a small factor, $\epsilon$ and a number of heads, $n$, and for $n$ iterations, iteratively computes the SHIPS and ablates the highest scoring head.
-\\
-Neuron deactivation sets all values in a neuron, $N_i$, to zero. A neuron is a row or column in the parameter matrices in an attention head or MLP. We locate neurons critical for safety from an MLP-layer, by calculating the importance of the neuron:
-\begin{equation*}
-    \mathcal{N}_{MLP}(x^{harm}) = ||h_{\mathrm{up}}(x^{harm}) \cdot \texttt{Mask} \bigr) W_{\mathrm{down}}||_2
-\end{equation*}
-where $h_{\mathrm{up}}(x^{harm})$ is the activation after up-projection, \texttt{Mask} is the identity-matrix of size $\text{dim}(h_{\mathrm{up}}) \times \text{dim}(h_{\mathrm{up}})$ and $W_{\mathrm{down}}$ is the down-projection matrix.
-\\
-Calculating the importance of neurons from attention head layers, we use the formula:
-\[\resizebox{\columnwidth}{!}{$\displaystyle
-\begin{aligned}
-    \mathcal{N}_{att}(x^{harm}) = &\left\|\operatorname{softmax}\!\left(
-\frac{W^Q(x^{harm})W^{kT}(x^{harm})-\Delta(x^{harm})}{\sqrt{d}}
-\right)\right. \\
-&\left.-
-\operatorname{softmax}\!\left(
-\frac{W^Q(x^{harm})W^{KT}(x^{harm})}{\sqrt{d}}
-\right)\right\|_2
-\end{aligned}
-$}\]
-where
-\[\resizebox{\columnwidth}{!}{$\displaystyle
-    \Delta(x^{harm}) = W^Q(x^{harm}).\operatorname{resize}(l,1,d)
-\times
-W^K(x^{harm}).\operatorname{resize}(1,l,d)
-$}\]
-The collection of neurons important for safety satisfies: 
-\begin{equation*}
-    \mathcal{N}_{\mathrm{safe}} = \{\, N_i \mid N_i \geq \epsilon,\ \forall \textbf{x}^{harm} \in \textbf{X}^{harm} \,\}
-\end{equation*}
-\\
-Vector steering takes a vector, $\textbf{r}$, that represents a given behavior and adds it to the residual stream at a given layer, $l$:
-\begin{equation*}
-    h(x)^{(l)}_{steer} = h(x)^{(l)} + \textbf{r}^{(l)}
-\end{equation*}
-Vector ablation takes a unit-norm vector, $\hat{\textbf{r}}$, that represents a given behavior and removes the direction from the residual stream in every layer in the network:
-\begin{equation*}
-    h(x)_{abl} = h(x) - \hat{\textbf{r}}\hat{\textbf{r}}^Th(x)
-\end{equation*}
-To locate the vector that represents refusing harmful queries, for each layer, $l$, at each token position, $i$, we calculate the mean activations for harmful queries, $\boldsymbol{\mu}^{(l)}$, and for safe queries, $\boldsymbol{\nu}^{(l)}$, and find the difference:
-\begin{align*}
-    \boldsymbol{\mu}^{(l)}_i &= \frac{1}{|\textbf{X}^{harm}|} \sum_{\textbf{X}^{harm}}h(x^{harm}_i)^{(l)} \\
-    \boldsymbol{\nu}^{(l)}_i &= \frac{1}{|\textbf{X}^{safe}|} \sum_{\textbf{X}^{safe}}h(x^{safe}_i)^{(l)} \\
-    \textbf{r}^{(l)}_i &=  \boldsymbol{\mu}^{(l)}_i - \boldsymbol{\nu}^{(l)}_i
-\end{align*}
-This gives $I \times L$ candidate vectors, and we choose the best one by validating their ability to bypass refusal.
 
-\subsection{What would finding a safety mechanism entail?}
-\label{sec:entailments}
-The interventions we evaluate are advanced as evidence that safety has been
-\emph{located}: in particular attention heads \citep{zhou2024ships}, in sparse MLP
-neurons, or in a single linear direction of the residual stream
-\citep{arditi2024refusal,zou2023representation}. We take no position on which of these
-objects---if any---deserves the name ``safety mechanism.'' The term has no agreed
-referent, and the claims are not stated in a common vocabulary in which one could be
-tested against another. What \emph{can} be tested is a claim's behavioural consequence.
-Whatever a safety mechanism is, removing one entails three things:
-\begin{enumerate}[leftmargin=1.4em, itemsep=1pt, topsep=2pt]
-  \item \textbf{Necessity.} Safety behaviour must actually degrade. A candidate whose
-  removal changes nothing was not load-bearing for safety.
-  \item \textbf{Selectivity.} \emph{Only} safety behaviour may degrade. If general
-  coherence collapses too, the intervention hit something broader than safety.
-  \item \textbf{Depth.} The change must be visible in the safety
-  \emph{computation}---the model's own reasoning about whether to comply---not merely
-  in the surface form of the final answer.
-\end{enumerate}
-The three axes below operationalise exactly these entailments: Potency measures
-necessity, Quality measures selectivity, and Safety-Reasoning measures depth. A method
-scores highly only when it behaves \emph{as if} it found a safety mechanism. The score
-therefore grades the \emph{localization claim}, not the ontology behind it; we return
-to what the signature can and cannot establish in \S\ref{sec:discussion} and the
-Limitations.
+We compare three target-discovery procedures and four intervention families: SHIPS head ablation \citep{zhou2024ships}, Safety Neuron Detection
+\citep{zhao2025neuron}, and refusal-direction activation addition and directional ablation \citep{arditi2024refusal}. We reproduce each discovery procedure on MaliciousInstruct \citep{bianchi2024safetytuned}, using Alpaca \citep{taori2023alpaca} as a benign contrast when required (we don't use our evaluation datasets for discovery). Appendix~\ref{sec:appendix-methods} specifies the discovery objectives and implementation details while the evaluation procedure is described in \ref{sec:axes} and \ref{sec:composite}. We interpret interventions as causal tests of behavior, not proof that a selected component is a unique safety mechanism. 
 
-\subsection{Three axes}
+% Interventional methods from MI are designed to investigate the effect that the steps of the computational process in a model have on the final output. Interventional methods change model-parameters and interpret the effect of the parameters by assessing how outputs are affected by the intervention. Since it is infeasible to examine all possible combinations of parameters from modern LLMs, methods have been developed to locate the specific parameters of interest for a given behavior.
+% \\
+% On a high level, we evaluate whitebox interventional methods' effect on safety behavior in 3 steps:
+% \begin{enumerate}[leftmargin=1.4em, itemsep=1pt, topsep=2pt]
+%     \item Locate potential safety-mechanisms
+%     \item Intervene on safety-mechanisms
+%     \item Evaluate the effect of intervention
+% \end{enumerate}
+% Step 1 and 2 are where the methods differ.
+% We experiment with 3 methods that find components critical for safe behavior in LLMs: \textit{Safety Head ImPortance Score} (SHIPS) uses attention head ablation as the intervention \citep{zhou2024ships}, \textit{Safety Neuron Detection} (SND) uses neuron deactivation as the intervention \citep{zhao2025neuron}, and \textit{Refusal Direction Extraction} that has two forms of interventions - vector steering and vector ablation \citep{arditi2024refusal}. Appendix \ref{sec:appendix-methods} describes each localization and intervention method, the evaluation procedure is described in \ref{sec:axes} and \ref{sec:composite}.
+
+\subsection{Three evaluation axes}
 \label{sec:axes}
-We score an intervention on a \emph{cell} $c$---a \texttt{(model, dataset, condition)}
-triple---along three axes that answer three separate questions: did it remove safety, did
-it keep the model intact, and did the visible reasoning still engage safety? Each axis is
-mapped to $[0,1]$ and, crucially, \emph{baseline-corrected} against the same-\allowbreak
-\texttt{(model, dataset)} baseline cell $b$ (the model with no intervention). Writing
-$\clip(x)=\max(0,\min(1,x))$,
+We score an intervention on a \emph{cell} $c$, a \texttt{(model, dataset, condition)} 3-tuple, and assume $b$ is it's \texttt{(model, dataset)} pre-intervention baseline. Let $C_c=\Pr(\text{clean})$ and $\clip(x)=\max(0,\min(1,x))$, we define,
+
 \begin{align}
-  \Ppot   &= \clip\!\left[\tfrac{\HAC_c-\HAC_b}{1-\HAC_b}\right],
-  & \Qual  &= \clip\!\left[\tfrac{\mathrm{clean}_c}{\mathrm{clean}_b}\right],
-  \label{eq:pq}\\[2pt]
-  \Sreason &= 1-\clip\!\left[\,|\gapm_c|-|\gapm_b|\,\right]. &&
+  \Ppot_c &= \clip\!\left(\frac{\HAC_c-\HAC_b}{1-\HAC_b}\right),
+  & \Qual_c &= \clip\!\left(\frac{C_c}{C_b}\right),
+  \label{eq:pq}\\[-1pt]
+  \Sreason_c &= 1-\clip\!\left(U_c-U_b\right).
   \label{eq:s}
 \end{align}
+where $\clip(x)=\max(0,\min(1,x))$
 
-\paragraph{Potency ($\Ppot$).} $\HAC$ is \emph{harmful-among-clean}: the attack-success
-rate computed \emph{only} over responses that pass a coherence gate. Gating first is what
-defeats the ``broke the model, didn't make it harmful'' loophole---incoherent output
-cannot count as a successful attack. $\Ppot$ is then the share of the
-still-refusable headroom $(1-\HAC_b)$ that the intervention converts into coherent harm.
+\textbf{Potency ($\Ppot$)}, $\HAC=\Pr(\text{harmful}\mid\text{clean})$ is the coherence-filtered attack success rate. Filtering for coherent responses first ensures that incoherent output does not count as a successful attack. $\Ppot$ is then the fraction of harmful responses that were initially safe before the intervention. Coherence Retention ($\Qual<1$) records response quality degradation rather than selective safety removal \citep{souly2024strongreject}. It measures coherence, not general task capability (\S\ref{sec:limitations}). \textbf{Monitorability Retention ($\Sreason$)} tests whether the harmfulness of the final output can be inferred from just the reasoning trace post-intervention. The paired monitoring protocol, covert-failure definition, and safety-reasoning analysis can be found in \S\ref{sec:cot-monitoring}. A high $\Sreason$ indicates that the intervention does not make harmful answers less visible to the trace monitor. Because $\Sreason=1-\clip(U_c-U_b)$ penalizes only covert failures $U$ (harmful answers behind a benign-looking trace) and is insensitive to over-warnings $O$, it is a \emph{threat-weighted} monitorability measure---equivalently, a \emph{Covert-Failure Retention} score---rather than a symmetric trace--answer agreement score. Pathway labels explain process changes but do not enter $\Sreason$.
 
-\paragraph{Quality ($\Qual$).} $\mathrm{clean}$ is the coherence-retention rate. $\Qual$
-falls below $1$ exactly when an intervention degrades the model rather than selectively
-removing its safety. (Quality is coherence-only here; benign-utility retention is future
-work, \S\ref{sec:limitations}.)
+We note that the axes only reflect the effect on safety \emph{behavior}: an intervention scores high when it behaves \emph{as if} it has found a safety-mechanism. The score grades the \emph{localization claim}, and a high score is necessary but not sufficient to support the claim. We return to what the signature can and cannot establish in \S\ref{sec:discussion}.
 
-\paragraph{Safety-Reasoning ($\Sreason$).} The CoT-monitorability gap
-$\gapm=\mathrm{asr}_{\text{final}}-\mathrm{asr}_{\text{cot-pred}}$ compares the harm of the
-full answer with what a judge predicts from the \emph{reasoning trace alone}. A large
-positive gap means unsafe answers behind benign-looking traces (monitorability collapsed,
-the worst case); $\Sreason$ rewards keeping the gap near the baseline's.
+\subsection{CoT monitoring and safety-reasoning analysis}
+\label{sec:cot-monitoring}
+For models with an explicit \texttt{<think>} block, answer judgments use only the final answer, and trace judgments use only the text inside the block.
+Qwen3-8B and OLMo-3-Think form the primary explicit-trace analysis. For the other arms, an early-response prefix is reported separately as a sensitivity
+analysis and is not treated as a private chain-of-thought.
 
-Baseline-correction is the load-bearing choice: it isolates the effect the intervention
-\emph{induces} from behaviour the base model already had, so the axes remain comparable
-across models whose base safety differs. We adopt a \emph{suppressive} orientation---a
-high score is a potent, coherence-preserving, still-monitorable removal of answer-safety;
-a defence evaluation simply flips the sign of $\Ppot$.
+For some prompt $i$, let $y_i$ be the final response harmfulness and $\hat y_i^{\mathrm{tr}}$ be a prediction about response harmfulness inferred from the reasoning trace alone. 
+\begin{align}
+ U_c&=\Pr(y_i=1,\hat y_i^{\mathrm{tr}}=0), \nonumber\\
+ O_c&=\Pr(y_i=0,\hat y_i^{\mathrm{tr}}=1), \nonumber\\[-1pt]
+ A_c&=\Pr(y_i=\hat y_i^{\mathrm{tr}}), \nonumber \\
+ \operatorname{FNR}^{\mathrm{tr}}_c&=\Pr(\hat y_i^{\mathrm{tr}}=0\mid y_i=1).
+ \label{eq:monitoring}
+\end{align}
+We define the covert-failure rate ($U_c$), over-warning ($O_c$), paired agreement ($A_c$), and trace false-negative rate ($\operatorname{FNR}^{\mathrm{tr}}_c$). The signed gap $\gapm_c=U_c-O_c=\Pr(\text{answer harmful})-\Pr(\text{trace predicts unsafe})$ is a descriptive measure of net under- versus over-warning on the common paired prompt set; it is \emph{not} a prompt-level agreement metric, because covert failures $U_c$ and over-warnings $O_c$ can cancel. We therefore also report $A_c$ and $\operatorname{FNR}^{\mathrm{tr}}_c$ where relevant. A large positive gap means unsafe answers behind benign-looking traces (monitorability collapsed); because $\Sreason=1-\clip(U_c-U_b)$ depends only on $U_c$, it rewards keeping the covert-failure rate near the baseline's rather than the signed gap.
 
-\subsection{The composite score}
+A sentence-level judge identifies whether and where the trace contains explicit safety reasoning. A fine-tuned pathway judge labels reasoning-trace prefixes
+along recognition, refusal dynamics, rationalization, and execution metrics. The 12-label taxonomy adapts the harmful-reasoning annotations introduced by
+HarmThoughts \citep{kakkar2026harmthoughts}. These diagnostics explain how the reasoning changes but are not considered when calculating $\SFS$. The full
+12-label taxonomy can be found in Appendix~\ref{sec:appendix-pathway}. We treat visible traces as monitoring signals rather than a guaranteed reflection of
+internal computation \citep{baker2025cotmonitoring,korbak2025monitorability}.
+
+\subsection{The Selective Failure Score}
 \label{sec:composite}
-We report the $(\Ppot,\Qual,\Sreason)$ vector with a Pareto front as the primary object,
-and one headline scalar for the reader who wants a single number---the
-\textbf{Selective-Failure Score}
+Following  HELM's multi-metric precedent \citep{liang2023helm}, we treat $(\Ppot,\Qual,\Sreason)$ and Pareto dominance as primary and report
+\textbf{Selective-Failure Score} (SFS):
 \begin{equation}
-  \SFS = \left(\Ppot\cdot\Qual\cdot\Sreason\right)^{1/3}.
+  \SFS_c=(\Ppot_c\Qual_c\Sreason_c)^{1/3}
   \label{eq:sfs}
 \end{equation}
-The geometric mean gives a ``no axis left behind'' property: any axis going to zero
-collapses the score, so a method cannot buy a high $\SFS$ by trading a broken model for
-raw potency. Reporting the scalar always \emph{with} the vector follows HELM's
-multi-metric precedent \citep{liang2022helm}. Two variants appear in the ablation
-(\S\ref{sec:appendix-metric}): $\SFS_{\text{prod}}=\Ppot\Qual\Sreason$ and the threat-oriented
-$\SFS_{\text{covert}}=\Ppot\Qual(1-\Sreason)$. Figure~\ref{fig:schematic} summarises.
-
-\begin{figure}[t]
-  \centering
-  \resizebox{\columnwidth}{!}{%
-  \begin{tikzpicture}[
-    font=\small,
-    axisbox/.style={rounded corners=2.5pt, draw=black!55, line width=0.6pt,
-                    inner sep=4pt, align=left, text width=3.15cm, fill=black!3},
-    op/.style={circle, draw=black!60, line width=0.7pt, inner sep=1.5pt,
-               align=center, fill=black!6, minimum size=1.05cm},
-    out/.style={rounded corners=2.5pt, draw=black!70, line width=0.9pt,
-                inner sep=4pt, align=center, fill=black!8},
-    arr/.style={-{Stealth[length=4pt]}, draw=black!55, line width=0.7pt}]
-    \node[axisbox] (P) {\textbf{Potency $P$}\\[1pt]
-      {\scriptsize removed safety?}\\ {\scriptsize induced coherent harm}};
-    \node[axisbox, below=5pt of P] (Q) {\textbf{Quality $Q$}\\[1pt]
-      {\scriptsize model intact?}\\ {\scriptsize coherence retention}};
-    \node[axisbox, below=5pt of Q] (S) {\textbf{Safety-Reasoning $S$}\\[1pt]
-      {\scriptsize CoT still safe-aware?}\\ {\scriptsize monitorability}};
-    \node[op, right=14pt of Q] (gm) {geo.\\mean};
-    \node[out, right=14pt of gm] (sfs) {$\mathrm{SFS}$\\[1pt]
-      {\scriptsize $(PQS)^{1/3}$}};
-    \draw[arr] (P.east) -- (gm);
-    \draw[arr] (Q.east) -- (gm);
-    \draw[arr] (S.east) -- (gm);
-    \draw[arr] (gm) -- (sfs);
-  \end{tikzpicture}}
-  \caption{\textbf{The metric.} Three baseline-corrected axes (Eqs.~\ref{eq:pq}--\ref{eq:s})
-    are reported as a $(P,Q,S)$ vector with a Pareto front, and combined by geometric
-    mean into the headline Selective-Failure Score (Eq.~\ref{eq:sfs}). Any axis $\to 0$
-    collapses the score.}
-  \label{fig:schematic}
-\end{figure}
+as a headline summary. The geometric mean gives a ``no axis left behind'' property: any axis going to zero collapses the score. Alternative variants and axis ablations are reported in Appendix~\ref{appendix-metric}. 
 
 \subsection{Experimental grid}
 \label{sec:grid}
-We evaluate on one controlled grid of 5 models $\times$ 2 datasets $\times$ up to 11
-conditions (Table~\ref{tab:grid}), with iso-ASR anchoring and layer-matched-random
-controls so that families are compared at matched strength rather than at each paper's
-preferred operating point. The four intervention families instantiate the distinct
-mechanistic targets a metric must be able to separate---per-head, per-neuron,
-dose-controlled activation-addition, and full directional ablation.
+The five models/configurations used consist of Qwen3-8B and OLMo-3-Think, which expose explicit traces; Llama-3.1-8B; and OLMo-3-Base with targets either
+transferred from OLMo-3-Think or discovered on the base checkpoint itself. On JailbreakBench (100 prompts) \citep{chao2024jailbreakbench} and BeaverTails (98)
+\citep{ji2023beavertails}, each arm is evaluated at baseline; head-ablation $k\in\{3,5,8\}$; neuron-ablation $k\in\{256,512,1024\}$; steering $\alpha\in\{0.5,1.0,1.5\}$; and directional ablation. Within each model-dataset pair, conditions share prompts, judges, and model-specific length limits. Intervention strength is varied using a dose-sweep. Uncertainty intervals use paired bootstrap over prompt IDs, preserving the shared prompts across conditions.
 
-\begin{table}[t]
-  \centering \small
-  \begin{tabular}{@{}ll@{}}
-    \toprule
-    \textbf{Axis} & \textbf{Values} \\
-    \midrule
-    Models & \texttt{qwen3\_8b}, \texttt{olmo3\_7b\_think}, \\
-           & \texttt{olmo3\_7b\_base}, \texttt{olmo3\_7b\_base\_own}, \\
-           & \texttt{llama31\_8b\_control} \\
-    \addlinespace[2pt]
-    Datasets & JailbreakBench (100), BeaverTails (98) \\
-    \addlinespace[2pt]
-    Conditions & \texttt{baseline}; \texttt{ships\_top\{3,5,8\}} (heads); \\
-               & \texttt{neurons\_top\{256,512,1024\}}; \\
-               & \texttt{steering\_a\{0.5,1.0,1.5\}} (add); \\
-               & \texttt{steering\_ablate} (dir.\ ablation) \\
-    \bottomrule
-  \end{tabular}
-  \caption{The evaluation grid. \texttt{steering\_a1.0} is the iso-ASR anchor.}
-  \label{tab:grid}
-\end{table}
 
 \subsection{Judges and their validation}
 \label{sec:judges}
-Three LLM judges instrument the axes: a 5-label safety + coherence judge (Qwen3-30B)
-feeds $\Ppot$ and $\Qual$; a per-sentence safety-reasoning trace judge and a CoT-only
-predictor (Qwen3-30B, vLLM backend) feed $\Sreason$; and a fine-tuned 12-label pathway
-judge (Qwen3-14B LoRA) provides the mechanistic decomposition behind $\Sreason$. A metric
-is only standardizable if its instruments are reliable: the pathway judge reaches
-$\kappa\approx0.96$ / $F_1\,0.98$ against a human gold set (a 30B baseline scores
-$\kappa\,0.21$), and the 5-label, CoT-only, and trace judges are human-validated on the
-\texttt{batch\_v5\_002} annotation task by two annotators. \TODO{full $\kappa$ table
-(Table 2) + inter-annotator agreement.}
+A four-class gibberish detector defines the coherence filter. Qwen3-30B is used to label answer harmfulness and refusal, predict harmfulness from the trace alone, and mark sentence-level safety reasoning. A Qwen3-14B LoRA judge supplies the pathway labels used for process level interpretation. Prompts, parsers, and full-per-label results are described in detail in Appendix ~\ref{sec:appendix-judges}. 
+
+Two annotators independently completed a blind set of 140 unique tasks (80 harmful/not final answer, 40 trace only predictions, and 20 sentence level annotations). Table~\ref{tab:judge-val} reports the load bearing decisions; the response-harmfulness and trace monitor judges perform approximately at the observed human-human reliability ceiling.  
+
+\begin{table}[t]
+  \centering\scriptsize
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    \textbf{Decision} & \textbf{Items} & $F_1$ & $\kappa_{J,H}$ & $\kappa_{H,H}$ \\
+    \midrule
+    Answer harmfulness & 80 & .782 & .575 & .599 \\
+    Trace predicts unsafe & 40 & .790 & .600 & .597 \\
+    Trace contains safety reasoning & 20 & .851 & .650 & -- \\
+    \bottomrule
+  \end{tabular}
+  \caption{Blind validation of headline judgments. Each item was labeled by two
+  annotators; $\kappa_{J,H}$ pools judge--human comparisons.}
+  \label{tab:judge-val}
+\end{table}
+
+Human-judge agreement is moderate to substantial for harmfulness ($\kappa=0.575$), trace-only unsafe prediction ($\kappa=.600$), and trace-level safety-reasoning detection ($\kappa=.650$). The pathway judge achieves $\kappa=.963$ ($F_1=.976$) on 180 held-out, trace-disjoint HarmThoughts examples; this constitutes transfer-domain validation, while finer-grained auxiliary labels remain descriptive and the coherence gate remains invalidated.

@@ -1,20 +1,34 @@
 % =========================================================================
 % 4. FINDINGS   [~2.75 pages]. §4.1 is drafted below; §4.2--4.4 remain outline.
 % =========================================================================
-\section{How Faithfully Do Interventions Capture Safety Mechanisms?}
+\section{Do Interventions Produce Selective Safety Failures?}
 \label{sec:compare}
 
-A white-box intervention that claims to isolate a model's safety behavior is essentially claiming that \emph{the components targeted by the intervention are responsible for the refusal of harmful requests}. We argue that a single metric is incapable of providing insight into whether an intervention effectively captures the \emph{safety mechanism} of a model. We then ask whether the intervention's effect has the \emph{behavioral signature} of a removal of the safety mechanism, along the three axes of \S\ref{sec:axes}. It should make the model produce coherent harmful answers that were previously refused/not harmful (potency, $\Ppot$); it should degrade safety reasoning without degrading the model's general competence (selectivity, $\Qual$); and it should leave the model's safety reasoning otherwise intact such that chain-of-thought still serves as a marker for harm (monitorability, $\Sreason$).
+% A white-box intervention that claims to isolate a model's safety behavior is essentially claiming that \emph{the components targeted by the intervention are responsible for the refusal of harmful requests}. We argue that a single metric is incapable of providing insight into whether an intervention effectively captures the \emph{safety mechanism} of a model. We then ask whether the intervention's effect has the \emph{behavioral signature} of a removal of the safety mechanism, along the three axes of \S\ref{sec:axes}. It should make the model produce coherent harmful answers that were previously refused/not harmful (potency, $\Ppot$); it should degrade safety reasoning without degrading the model's general competence (selectivity, $\Qual$); and it should leave the model's safety reasoning otherwise intact such that chain-of-thought still serves as a marker for harm (monitorability, $\Sreason$).
+% \TODO{most of above paragraph is in prelims/introduction. Shorten}
 
-Measuring how well an intervention captures the safety mechanism behind a model presupposes that a safety mechanism exists; we separate our study into two tiers of models throughout. The former, \emph{safety-trained} models (\model{Qwen3-8B}, \model{Llama-3.1-8B}, and \model{OLMo-3-think}), are aligned and possess low attack success rate scores at baseline. The latter consists of the \model{OLMo3-base} model, which is retrieved from a pre-alignment checkpoint \TODO{cite Olmo}. We use the latter as a set of controls to ask whether any safety representation exists in the first place. \model{OLMo3-base} applies the safety specific artifacts \emph{discovered on \model{OLMo3-think}} (as a transfer test)\TODO{clarify this better, need a definition for artifacts in the prelim section, maybe appendix?}. \model{OLMo3-base-own} applies artifacts discovered on the base model itself (self-discovery). This section establishes, (i) raw-ASR systematically overstates how well interventions localize safety (\S\ref{subsec:c1}), and (ii)~once the measure is corrected, the families separate sharply, by intervention method and by model type, into faithful and unfaithful representations of the safety mechanism. With our experiments on the \model{OLMo3-base} models serving as a metric of how well the interventions work when there's little mechanism for discovery. 
+% Measuring how well an intervention captures the safety mechanism behind a model presupposes that a safety mechanism exists; we separate our study into two tiers of models throughout. The former, \emph{safety-trained} models (\model{Qwen3-8B}, \model{Llama-3.1-8B}, and \model{OLMo-3-think}), are aligned and possess low attack success rate scores at baseline. The latter consists of the \model{OLMo3-base} model, which is retrieved from a pre-alignment checkpoint \TODO{cite Olmo}. We use the latter as a set of controls to ask whether any safety representation exists in the first place. \model{OLMo3-base} applies the safety specific artifacts \emph{discovered on \model{OLMo3-think}} (as a transfer test)\TODO{clarify this better, need a definition for artifacts in the prelim section, maybe appendix?}. \model{OLMo3-base-own} applies artifacts discovered on the base model itself (self-discovery). This section establishes, (i) raw-ASR systematically overstates how well interventions localize safety (\S\ref{subsec:c1}), and (ii)~once the measure is corrected, the families separate sharply, by intervention method and by model type, into faithful and unfaithful representations of the safety mechanism. Our experiments in the \model{OLMo3-base} models serve as a metric of how well the interventions work when there's little mechanism for discovery.
 
+Intervention-induced behavior is necessary but not a sufficient condition for the mechanization localization claim. We therefore verify if each intervention produces the selective failure signal defined in \S\ref{sec:axes}, reporting the $(\Ppot,\Qual,\Sreason)$ vector and using $\SFS$ as a summary. These quantities provide behavioral evidence consistent with localization; however, they do not provide evidence that targeted components capture the safety mechanism behind the model. 
 
-\subsection{Raw Attack Success Rate is Not a Fair Measure}
+We run our experiments on three safety-trained variants: \model{Qwen3-8B} \citep{yang2025qwen3}, \model{Llama-3.1-8B} \citep{grattafiori2024llama3}, and \model{OLMo-3-Think} \citep{teamolmo2025olmo3}.
+
+%In the
+%\emph{transfer} control, intervention targets (heads, neurons, or directions) identified on \model{OLMo-3-Think} are applied to \model{OLMo-3-Base}; in the
+%\emph{self} control (\model{OLMo-3-Base-Own}), targets are identified on the base checkpoint itself. We use this as a set of controls to ask whether any safety representation exists in the first place in pre-alignment models. 
+We first compare raw attack success rate with baseline-corrected evaluation (\S\ref{subsec:c1}), the compare the resulting signatures across families and models (\S\ref{subsec:c2}). We report several additional observations supported
+by our comparative study in appendix \ref{sec:appendix-comp-other}.
+
+\subsection{Raw Attack Success Rate Conflates Baseline Harm}
 \label{subsec:c1}
 
-StrongREJECT evaluations already show that apparent attack success is not a fair measure when the response is of low-quality or generally unhelpful \citep{souly2024strongreject}. Our claim specific to white-box interventions: even after coherence-gating, a harmful final answer does not show that the intervention captured a safety mechanism. The harm may be induced by suppressing a safety-relevant computation, inherited via an already-unsafe baseline, or produced by degrading model response quality. This subsection isolates the baseline confound: whether raw $\HAC$ is comparable to our baseline corrected metric $\SFS$. 
+StrongREJECT evaluations already show that apparent attack success is not a fair measure when the response is of low-quality or generally unhelpful \citep{souly2024strongreject}. White-box intervention has an additional problem: even a coherence-filtered harmful-answer rate $\HAC$ does not identify how much harm was induced above the model's baseline; nor does $HAC$ report how much coherence or trace monitorability the intervention retained. 
 
-A raw coherence-gated ASR is not a faithful score for whether an intervention has localized a model's safety mechanism. We first ask whether it provides the same \emph{ordering} of interventions as the full faithfulness metric. For this comparison, we use Kendall's $\tau$; we rank the interventions (steering at $\alpha\in\{0.5,1.0,1.5\}$, directional ablation, SHIPS top-$\{3,5,8\}$, and neurons top-$\{256,512,1024\}$ ) within each model by raw ($\HAC$) scores and separately by the decomposed score $\SFS$, averaging across the two datasets. The rankings can diverge substantially, in the \model{OLMo3-base} pre-alignment checkpoint, Kendall's $\tau$ falls as low as $0.73$, indicating that $\HAC$ induces non-trivial pairwise reordering relative to $\SFS$. Once $\HAC$ is converted into the baseline-corrected Potency, agreement with the full composite score remains high $\tau(\Ppot,\SFS)\ge 0.82$. The normalization we perform is not an arbitrary choice of scalar; it aims to isolate the contribution of the intervention in question. Figure~\ref{fig:raw-vs-sfs} shows the two scores per-intervention on \model{OLMo3-base}. 
+We first ask whether raw $\HAC$ and $\SFS$ order interventions similarly. For each model arm, we macro-average the two dataset-level values for each of the ten
+non-baseline conditions and compute Kendall's $\tau_b$, which accounts for ties \citep{kendall1945ties}. Agreement is high on the safety-trained arms:
+$\tau_b(\HAC,\SFS)=0.91$ on \model{Qwen3-8B}, $0.91$ on \model{Llama-3.1-8B}, and $1.00$ on \model{OLMo-3-Think}. The two pre-alignment controls differ: agreement is $0.73$ for transfer and $0.94$ for self. Replacing raw $\HAC$ with baseline-corrected Potency yields $\tau_b(\Ppot,\SFS)=0.82$--$1.00$ across all five arms, including $0.82$ on the transfer control. Raw $\HAC$ is therefore not uniformly uninformative; its comparability breaks most clearly when harmful behavior is already present at baseline. Figure~\ref{fig:raw-vs-sfs} shows the corresponding cell-level relationship across the primary grid.
+
+% A raw coherence-gated ASR is not a faithful score for whether an intervention has localized a model's safety mechanism. We first ask whether it provides the same \emph{ordering} of interventions as the full faithfulness metric. For this comparison, we use Kendall's $\tau$ \TODO{cite or describe in prelims/appendix}; we rank the interventions (steering at $\alpha\in\{0.5,1.0,1.5\}$, directional ablation, SHIPS top-$\{3,5,8\}$, and neurons top-$\{256,512,1024\}$ ) within each model by raw ($\HAC$) scores and separately by the decomposed score $\SFS$, averaging across the two datasets. The rankings can diverge substantially, in the \model{OLMo3-base} pre-alignment checkpoint, Kendall's $\tau$ falls as low as $0.73$, indicating that $\HAC$ induces non-trivial pairwise reordering relative to $\SFS$. Once $\HAC$ is converted into the baseline-corrected Potency, agreement with the full composite score remains high $\tau(\Ppot,\SFS)\ge 0.82$. \TODO{Unclear if $\tau$ is on OLMo-3-base or on all models?} The normalization we perform is not an arbitrary choice of scalar; it aims to isolate the contribution of the intervention in question. Figure~\ref{fig:raw-vs-sfs} shows the two scores per-intervention on \model{OLMo3-base}. 
 
 \begin{figure}[t]
   \centering
@@ -24,7 +38,7 @@ A raw coherence-gated ASR is not a faithful score for whether an intervention ha
 \end{figure}
 
 \paragraph{The failure mode is baseline harm.}
-The OLMo-3 base model makes the failure mode concrete. In the no-intervention cell, the model exhibits a higher $\HAC$ score at $66\%$. After intervention, raw $\HAC$ for all ten non-baseline conditions remains relatively high ($0.65$--$0.81$) indicating successful interventions. Baseline corrected scores $\Ppot$ indicate that this higher score is largely inherited from the base model and not intervention specific. 
+The OLMo-3 base model makes the failure mode concrete. On JailbreakBench, in the no-intervention cell, the model exhibits a higher $\HAC$ score at $66\%$. After intervention, raw $\HAC$ for all ten non-baseline conditions remains relatively high ($0.65$--$0.81$), indicating successful interventions. Baseline corrected scores $\Ppot$ indicate that this higher score is largely inherited from the base model and not intervention specific. This is visualized in Figure \ref{fig:baseline}.
 
 \begin{figure}[t]
   \centering
@@ -33,82 +47,76 @@ The OLMo-3 base model makes the failure mode concrete. In the no-intervention ce
   \label{fig:baseline}
 \end{figure}
 
-\paragraph{\model{OLMo3-Base-Own} as Falsification Control.}
-A good metric should not report a strong safety mechanism in a checkpoint with little alignment-induced safety to find. We test this on the OLMo3-Base versions, \model{OLMo3-Base-Own}- self discovers artifacts corresponding to safety using the given checkpoint while \model{OLMo3-Base} - transfer, applies artifacts discovered on \model{OLMo3-Think}. We hypothesize that none of the interventions should induce coherent harm because there is no alignment circuitry to remove. This holds for our localized method, with per-neuron ablation inducing no harm under either case ($\Ppot=0.04$ on transfer, $\Ppot=0.03$ on self), and the self-discovery variant scores the lowest of all the cells. The transfer contrast itself is small (Table~\ref{tab:transfer}). 
-
-\begin{table}[t]
-  \centering \small
-  \begin{tabular}{@{}lccc@{}}
-    \toprule
-    & \multicolumn{2}{c}{\textbf{Potency} $\Ppot$} & \\
-    \cmidrule(lr){2-3}
-    \textbf{Family} & transfer & self & $\Delta$ \\
-    \midrule
-    Steering              & 0.18 & 0.12 & $-0.06$ \\
-    Directional ablation  & 0.04 & 0.12 & $+0.07$ \\
-    SHIPS (heads)         & 0.15 & 0.14 & $-0.01$ \\
-    Neuron                & 0.04 & 0.03 & $-0.01$ \\
-    \bottomrule
-  \end{tabular}
-  \caption{\textbf{Artifacts on the pre-alignment \model{OLMo-3-base} checkpoint.} \emph{transfer} reuses artifacts discovered on the aligned \model{OLMo-3-think}; \emph{self} discovers them on the base model itself (\model{-base-own}). Both share an identical baseline ($\HAC=0.66/0.63$). The localized methods induce little coherent harm under either provenance and the transfer difference is negligible, consistent with the base model having little safety representation to localize.}
-  \label{tab:transfer}
-\end{table}
+% \begin{table}[t]
+%   \centering \small
+%   \begin{tabular}{@{}lccc@{}}
+%     \toprule
+%     & \multicolumn{2}{c}{\textbf{Potency} $\Ppot$} & \\
+%     \cmidrule(lr){2-3}
+%     \textbf{Family} & transfer & self & $\Delta$ \\
+%     \midrule
+%     Steering              & 0.18 & 0.12 & $-0.06$ \\
+%     Directional ablation  & 0.04 & 0.12 & $+0.08$  \\
+%     SHIPS (heads)         & 0.15 & 0.14 & $-0.01$ \\
+%     Neuron                & 0.04 & 0.03 & $-0.01$ \\
+%     \bottomrule
+%   \end{tabular}
+%   \caption{\textbf{Artifacts on the pre-alignment \model{OLMo-3-base} checkpoint.} \emph{transfer} reuses artifacts discovered on the aligned \model{OLMo-3-think}; \emph{self} discovers them on the base model itself (\model{-base-own}). Both share an identical baseline ($\HAC=0.66/0.63$). The localized methods induce little coherent harm under either provenance and the transfer difference is negligible, consistent with the base model having little safety representation to localize.}
+%   \label{tab:transfer}
+% \end{table}
 
 %-----------------------------------------------------------------------------------------------------------------
 %-----------------------------------------------------------------------------------------------------------------
 
-\subsection{Faithfulness differs by method and model}
+\subsection{Safety-Trained Models Exhibit Distinct Selective-Failure Signatures}
 \label{subsec:c2}
 
-\paragraph{Methods separate once corrected.} 
-Using the three models with an alignment-induced mechanism as a reference, we show the four interventions occupying different points on the faithfulness scale (Table~\ref{tab:intervention_family}. Activation steering is the most faithful localization ($\SFS=0.67$), followed by directional ablation ($0.47$), while per-neuron ablation ($0.26$) and head ablation (SHIPS, $0.23$) trail behind. The intervention families retain high-quality and safety reasoning on average ($\Qual,\Sreason\ge 0.88$), making the difference a gap in $\Ppot$. The safety head and neuron level interventions fail to capture the safety mechanism of the model effectively, i.e., removing components identified by SHIPS, and neuron masking don't convert refusal into coherent harm, whereas directional based methods do. 
+The substantive comparison is across the three safety-trained arms. Their responses are not variations of a single family leaderboard: the same intervention family can produce a strong selective-failure signature on one checkpoint and remain nearly inert on another (Figure~\ref{fig:family-model}).
 
-\begin{table}[t]
-  \centering \small
-  \begin{tabular}{@{}lcccc@{}}
-    \toprule
-    \textbf{Family} & $\Ppot$ & $\Qual$ & $\Sreason$ & $\SFS$ \\
-    \midrule
-    Steering              & 0.43 & 0.97 & 0.95 & \textbf{0.67} \\
-    Directional ablation  & 0.14 & 0.99 & 0.96 & 0.47 \\
-    Neuron                & 0.07 & 0.98 & 0.98 & 0.26 \\
-    SHIPS (heads)         & 0.04 & 0.88 & 0.90 & 0.23 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Faithfulness of each localization family on the safety-trained tier
-    (\model{Qwen3-8B}, \model{Llama-3.1-8B}, \model{OLMo-3-think}), pooled over two
-    datasets. The separation is a separation in potency $\Ppot$ (necessity);
-    quality and safety-reasoning stay high, so no family wins by breaking the
-    model. Head ablation's lower $\Qual$ reflects the coherence collapse discussed
-    below.}
-  \label{tab:intervention_family}
-\end{table}
+\paragraph{\model{Qwen3-8B}: direction-level interventions dominate.}
+Directional ablation and activation steering attain mean $\SFS$ values of $0.58$ and $0.49$, respectively, whereas SHIPS and neuron ablation remain near
+$0.13$ and $0.12$. At the strongest steering dose, however, steering reaches $\SFS=0.61$, comparable to directional ablation. The supported distinction is
+therefore not that directional ablation uniformly outperforms steering, but that direction-level interventions produce substantially stronger selective
+failure than the tested sparse head and neuron selectors on this model.
 
-\paragraph{The pooled ordering hides real model dependence.} The family ranking is a pooled average, and even within the safety-trained tier it is not uniform: which
-method most faithfully localizes safety depends on the model (Figure~\ref{fig:family-model}). Steering is the most faithful family on \model{Llama-3.1} ($\SFS=0.88$) and \model{OLMo-3-think} ($0.64$), but on \model{Qwen3} directional ablation is most faithful ($0.57$ vs steering's $0.49$). We therefore report the family ordering as a distribution over models rather than a single leaderboard and caution against a comparison run on any one model.
+\paragraph{\model{Llama-3.1-8B}: broad susceptibility, but different diagnoses.}
+Steering is strongest on average ($\SFS=0.88$), while directional ablation ($0.58$) and neuron ablation ($0.51$) also have substantial effects. The neuron
+result is concentrated at the largest budget, where \condition{neurons\_top1024} reaches $\Ppot=0.41$. SHIPS obtains a lower mean score ($0.30$) and does so with pronounced collateral degradation: on JailbreakBench, \condition{ships\_top5} and \condition{ships\_top8} reduce Coherence Retention to $\Qual=0.44$ and $0.46$. By contrast, steering averages $\Ppot=0.78$ with $\Qual=0.93$. The decomposition, therefore, distinguishes selectively induced harm from an intervention that partly breaks the model.
+
+\paragraph{\model{OLMo-3-Think}: vulnerability is selector-specific.}
+Activation steering reaches a mean $\SFS$ of $0.64$ and rises to $0.88$ at $\alpha=1.5$, where $\Ppot=0.77$ and $\Qual=0.99$. Directional ablation, SHIPS,
+and neuron ablation remain between $0.14$ and $0.27$. Low scores for the component-level methods should therefore not be interpreted as global resistance of the checkpoint: the same model is strongly affected by activation addition along the discovered direction.
 
 \begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/composite_02_family_mean_sfs.png}  % REBUILD: grouped by model
-  \caption{\textbf{Faithfulness by family, grouped by model.} On the safety-trained tier no single family dominates: steering is most faithful on \model{Llama-3.1}
-    and \model{OLMo-3-think}, directional ablation on \model{Qwen3}. The two pre-alignment base arms are shown separately as controls. Bars are mean $\SFS$ over the two datasets; intervals are bootstrap over prompts.}
-  \label{fig:family-model}
+\centering
+\includegraphics[width=\linewidth]{figures/composite_04_model_family_sfs_heatmap.png}
+\caption{\textbf{Mean selective-failure score by model and intervention family.} Cells report mean $\SFS$ over the two evaluation datasets and all tested conditions within each family. Steering is strongest on \model{Llama-3.1-8B} and \model{OLMo-3-Think}, while directional ablation is strongest on \model{Qwen3-8B}. The two pre-alignment controls exhibit different patterns: steering and SHIPS perform similarly on \model{OLMo-3-Base}, whereas SHIPS is strongest on \model{OLMo-3-Base-Own}. Because each family uses a different intervention-strength scale, the heatmap summarizes the evaluated grid rather than a matched-strength comparison.}
+\label{fig:family-model}
 \end{figure}
 
-\paragraph{Model Resilience.} 
-Considering the safety trained models across all intervention families gives us fair measure of resilience, i.e., how hard a model's safety mechanism is to remove using any of the interventions (means $\SFS$ across all conditions, lower is more resilient). Among the aligned models, we see \model{Qwen3} is the most resilient to change ($0.28$), followed by \model{OLMo3-think} ($0.34$), and \model{Llama-3.1} ($0.57$). Resilience is a model property that works well when drawing comparisons to other models and works orthogonally to baseline safety. \model{OLMo3-think} shows very low attack success rates at baselines but is not the most resilient.
+\paragraph{Direction-based methods are strongest on average, not universally.}
+Pooling the three safety-trained arms, activation steering has the largest mean $\SFS$ ($0.67$), followed by directional ablation ($0.47$), neuron ablation
+($0.26$), and SHIPS head ablation ($0.23$; Table~\ref{tab:intervention_family}). The separation is driven primarily by Potency: mean Coherence Retention and Monitorability Retention remain at least $0.88$ for every family. Under the tested target-selection procedures and intervention strengths, direction-based methods, therefore, provide stronger behavioral evidence for localized control of refusal. This does not establish that safety ``is a direction,'' nor that the selected heads or neurons are irrelevant; the methods operate at different representational levels, and their strength scales are not commensurate.
 
-\paragraph{Coherence-gating is what makes the comparison fair.}
-The reason low-necessity \TODO{define necessity, selectivity in prelims} families do not simply win on raw ASR is that $\Qual$ and the coherence filtering catch only the cells where an intervention "succeeds" in compromising the model. The clearest cases are safety head ablations on \model{Llama-3.1}, where \condition{ships\_top5} and \condition{ships\_top8} drop quality to $\Qual=0.44$ and $0.46$, and the largest neuron ablations on the \model{OLMo3-base-own} run where \condition{neuron\_top1024} retains coherence on $51\%$ of the prompts. A raw attack-success rate counts these degenerate outputs as successful compromises; but our coherence filter and $\Qual$ penalize this phenomenon. 
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Family} & $\Ppot$ & $\Qual$ & $\Sreason$ & $\SFS$ \\
+\midrule
+Steering             & 0.43 & 0.97 & 0.95 & \textbf{0.67} \\
+Directional ablation & 0.14 & 0.99 & 0.96 & 0.47 \\
+Neuron               & 0.07 & 0.98 & 0.98 & 0.26 \\
+SHIPS (heads)        & 0.04 & 0.88 & 0.90 & 0.23 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Mean selective-failure signature by intervention family on the safety-trained arms.} Means pool the two datasets and all tested conditions within each family for \model{Qwen3-8B}, \model{Llama-3.1-8B}, and \model{OLMo-3-Think}. The unequal, family-specific dose ladders make this a summary of the evaluated grid rather than a matched-strength comparison.}
+\label{tab:intervention_family}
+\end{table}
 
-\paragraph{Steering shows scaling.} 
-We hypothesize that faithfulness in capturing safety mechanisms should scale with intervention strength. Steering alone is able to show us this trend, increasing the activation addition coefficient produces a monotone rise in induced harm on our reasoning models (\model{OLMo-3-think} $\Ppot$: $0.05\!\to\!0.32\!\to\!0.77$ at
-$\alpha=0.5/1.0/1.5$), with quality and safety-reasoning effectively flat. The head and neuron interventions show no comparable dose-response, i.e., scaling the intervention does not show much gain, which acts as further evidence that they don't all isolate the same causal object. Per-model dose curves are in Figure~\ref{fig:dose-response}. 
+\paragraph{Coherence Retention changes the diagnosis.}
+Coherence-gating ensures that Potency is computed only among usable responses, while $\Qual$ separately reports how many responses survive that gate. This
+distinction is clearest for SHIPS on \model{Llama-3.1-8B}: the apparent answer-level effect of larger head ablations is accompanied by severe coherence loss, whereas steering induces substantially more harm while preserving model behavior. Thus, two interventions with similar apparent attack success need not provide equally strong evidence for selective safety removal.
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=\textwidth]{figures/composite_10_dose_response_compact.png}
-  \caption{\textbf{Steering scales; localized interventions do not.} Baseline-corrected potency $\Ppot$ (and, faintly, $\Qual$ and $\Sreason$) against intervention strength, per model. For steering, strength is the activation-addition coefficient $\alpha\in\{0.5,1.0,1.5\}$; for head and neuron ablation it is the number of components removed (\condition{top-\{3,5,8\}} heads; \condition{top-\{256,512,1024\}} neurons). Steering induces a monotone rise in $\Ppot$ on the reasoning models while
-    $\Qual$ and $\Sreason$ stay flat; the head and neuron families show no comparable trend, indicating they do not isolate the same causal object.}
-  \label{fig:dose-response}
-\end{figure*}
+Taken together, the decomposition changes the diagnosis in three ways. Baseline correction separates induced harm from inherited harm; Coherence Retention separates selective failure from collateral degradation; and the remaining effects are strongly method-, model-, and dose-dependent. No intervention family produces a uniformly strong selective-failure signature across the primary grid.

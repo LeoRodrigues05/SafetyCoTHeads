@@ -41,18 +41,41 @@ def v6_judge_dir(cell: C.Cell) -> Path:
 
 
 def build_inputs(cell: C.Cell, text_field: str, stage: str, prose_prefix: bool) -> list[dict]:
+    """Build judge-input rows for a cell, feeding each stage its required structure.
+
+    * ``answer``/``coherence`` -> the parsed final ``answer_text``.
+    * ``monitor`` (cot_only)   -> the whole ``trace_text`` (one row/completion).
+    * ``pathway``              -> cumulative-prefix rows over the trace (P0.4).
+    * ``safety-reasoning``     -> one indexed-sentence row per completion (P0.4).
+    """
+    from safety_cot_heads.direction_a_v6.trace_inputs import (
+        build_pathway_prefix_rows, build_indexed_sr_row)
     parsed = C.read_jsonl(cell.v6_parsed_dir() / "parsed_completions.jsonl")
-    rows = []
+    rows: list[dict] = []
     for r in parsed:
-        if stage in ("monitor", "pathway", "safety-reasoning"):
-            # explicit-trace stages need a real explicit trace, UNLESS this is the
-            # prose-prefix sensitivity pass (then use the prose prefix, labelled).
+        if stage == "pathway":
+            for x in build_pathway_prefix_rows(r):
+                x["seed"] = cell.seed
+                x["trace_kind"] = r.get("trace_kind")
+                x["is_prefix"] = bool(prose_prefix)
+                rows.append(x)
+            continue
+        if stage == "safety-reasoning":
+            x = build_indexed_sr_row(r)
+            if x is not None:
+                x["seed"] = cell.seed
+                x["trace_kind"] = r.get("trace_kind")
+                x["is_prefix"] = bool(prose_prefix)
+                rows.append(x)
+            continue
+        if stage == "monitor":
+            # whole-trace unsafe prediction; prose-prefix pass uses the prose prefix.
             if r.get("has_explicit_trace"):
                 text = r.get("trace_text") or ""
             elif prose_prefix and r.get("trace_kind") == "prose_prefix":
                 text = r.get("prose_prefix_text") or ""
             else:
-                continue  # no trace to monitor -> excluded (recorded via parse diag)
+                continue
             if not text.strip():
                 continue
         else:  # answer / coherence
@@ -144,23 +167,37 @@ def main():
     _run_model_stage(plan, args, kind)
 
 
-def _run_coherence(plan):
-    from safety_cot_heads.analysis.coherence import coherence_diagnostics, classify_gibberish
+def _run_coherence(plan, device=None):
+    """Coherence gate on parsed answer_text (P0.3: uses the gibberish classifier).
+
+    ``device`` forwards to the gibberish classifier (pass 'cpu' to avoid
+    contending with a running GPU judge).
+    """
+    from safety_cot_heads.analysis.coherence import (
+        coherence_diagnostics, classify_gibberish, canonical_is_clean)
     for cell, out_path, rows in plan:
         if not rows:
             continue
         texts = [r["completion"] for r in rows]
         diag = coherence_diagnostics(texts)
         try:
-            gib = classify_gibberish(texts)
-        except Exception:
+            gib = classify_gibberish(texts, device=device) if device else classify_gibberish(texts)
+        except Exception as e:
+            print(f"[judge-shard] WARN gibberish classifier unavailable ({e}); "
+                  "gate falls back to non-empty+repetition and records it")
             gib = [{} for _ in texts]
         out = []
         for r, d, g in zip(rows, diag, gib):
             rec = {"id": r["id"], **d}
+            glabel = g.get("gibberish_label") if isinstance(g, dict) else None
             if isinstance(g, dict):
                 rec.update({k: g[k] for k in ("gibberish_label", "gibberish_score") if k in g})
-            rec["is_clean"] = (not d["is_empty"]) and d["repeat3"] < 0.5
+            gate = canonical_is_clean(is_empty=d["is_empty"], repeat3=d["repeat3"],
+                                      gibberish_label=glabel)
+            rec["is_clean"] = gate["is_clean"]
+            rec["coherence_gate_version"] = gate["gate_version"]
+            rec["gate_components"] = gate["components"]
+            rec["gate_fail_reasons"] = gate["fail_reasons"]
             out.append(rec)
         C.write_jsonl(out_path, out)
     print(f"[judge-shard] coherence(answer_text) done for {len(plan)} cells")

@@ -1,98 +1,106 @@
 % =========================================================================
-% 5. DISCUSSION   [~0.5 page]
-% GOAL: zoom out from "our grid" to "why the instrument matters." No new results.
+% 5. DISCUSSION
 % =========================================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\paragraph{The measurement problem is not specific to the four intervention methods.}
-The sharpest practical finding of \S\ref{sec:compare} is that a raw attack success rate re-ranks interventions and over credits already unsafe models. Any white-box intervention evaluated with an absolute rate inherits its model's baseline harm, and the cheap correction provided with our potency $\Ppot$ metric alleviates this issue. We encourage intervention papers to report baseline-corrected potency alongside a coherence or quality axis by default, independent of whether the composite metric is adopted. Together, this makes intervention results across models and papers comparable. 
+\paragraph{The measurement problem extends beyond the four evaluated methods.}
+The clearest practical result of \S\ref{sec:compare} is that an absolute
+harmful-answer rate can reorder interventions and attribute pre-existing model
+harm to the intervention. Baseline-corrected Potency removes this avoidable
+confound, while Coherence Retention distinguishes selective safety failure from
+broad response degradation. We therefore recommend that white-box intervention
+studies report an induced-effect measure and a coherence or utility measure
+alongside raw attack success, even when they do not adopt $\SFS$. The full
+$(\Ppot,\Qual,\Sreason)$ vector should remain the primary report: the Pareto view
+in Figure~\ref{fig:appendix-pareto} makes trade-offs explicit, whereas $\SFS$
+provides a compact headline summary. These corrections do not eliminate
+differences in datasets, judges, or intervention access, but they make
+cross-model and cross-study comparisons more interpretable.
 
-\paragraph{Most localizations do not localize behaviorally.}
-At matched strength, the direction-based interventions leave the signature of a removed safety mechanism, i.e., they induce coherent harm without any loss of coherence. The safety head and neuron interventions are not indicative of this; removing the components they identify changes little. Our falsification claim supports this: a discovery of safety artifacts in a model with no safety training returns confident targets, the removal of which induces effectively no harm. We are correspondingly careful about what a high score licenses. A potent, selective, monitorable intervention behaves as if it found a safety mechanism, necessary but not sufficient.
+\paragraph{The tested families provide unequal behavioral evidence for localization.}
+Across the safety-trained arms, direction-based methods produce the strongest
+selective-failure signatures on average, but the ordering is model-dependent
+and should not be interpreted as a matched-strength comparison. Steering is
+strongest on \model{Llama-3.1-8B} and \model{OLMo-3-Think}, directional
+ablation is strongest on \model{Qwen3-8B}, and large-budget neuron ablation has
+a substantial effect on Llama. By contrast, head and neuron ablation are often
+weak or accompanied by coherence loss. The pre-alignment controls further show
+that target-discovery procedures can return ranked targets on a checkpoint with
+little alignment-induced safety, while raw harmful-answer rates can make those
+interventions appear effective even when baseline-corrected Potency is small.
+These results grade the operational localization claims supported by the tested
+selectors and budgets. A high $(\Ppot,\Qual,\Sreason)$ signature provides causal
+behavioral evidence consistent with localization, but it cannot establish that
+a target is the unique, minimal, or sufficient safety mechanism; a downstream
+or correlated substrate could produce the same signature.
 
-\paragraph{Where the safety computation appears to sit.} 
-The chain-of-thought results (\S\ref{sec:cot}) indicate that across families, the intervention leaves recognition and refusal initiation near baseline while raising execution and operational detail; the labels that move with induced harm are the downstream ones, and explicit refusal-suppression barely moves. These interventions therefore override the safety mechanism's effect on the \emph{output} rather than deleting the upstream computation that recognizes harm and begins to refuse. That the direction methods succeed where component-ablation fails fits the same picture: safety behavior here looks more like a recoverable direction acted on late than a small set of components whose removal erases it.
+\paragraph{The visible pathway shifts are consistent with downstream bypass.}
+In the explicit-trace models, harmful completions often preserve visible harm
+recognition and refusal initiation, while execution and operational details
+increase. This pattern is most pronounced under steering, which produces the
+largest pathway shift in our grid. Under the tested conditions, the result is
+consistent with steering changing how visible safety considerations influence
+the final answer, rather than simply erasing their appearance in the trace. This
+is a trace-level inference, not a localization of the underlying latent
+computation. It neither rules out a component-level implementation nor implies
+that safety is literally represented by a single direction: a residual-stream
+direction may aggregate features implemented across heads or neurons, and weak
+component-ablation results may reflect limitations of the selector or budget
+rather than the irrelevance of those components.
 
-\paragraph{Good news for chain-of-thought monitoring, with an expiry condition.} The
-monitorability result is, for once, reassuring: none of these interventions buys
-potency by hiding harm from the trace. Even at the strongest steering dose, the
-reasoning stays at least as revealing as the answer---more conflicted, not more
-concealing---so an auditor reading the chain-of-thought would still catch the harm.
-This is direct evidence for the premise of the CoT-monitoring agenda
-\citep{baker2025cotmonitoring, korbak2025monitorability}: against this class of
-white-box suppression, monitoring the reasoning is robust. The caveat is that the
-guaranty belongs to models that \emph{externalize} their reasoning---it held on the
-two explicitly-reasoning models and had little to grip on the others, whose traces
-rarely verbalize safety. As models move toward shorter or more latent reasoning, the
-monitorable surface these interventions leave intact may cease to exist, and the
-positive result would not transfer. Monitorability is worth measuring precisely
-because it is contingent.
- 
+\paragraph{Monitorability is a diagnostic property, not an intervention objective.}
+Monitorability Retention does not make an intervention intrinsically more
+desirable; it records whether intervention-induced harmful behavior becomes
+less detectable from the available trace. Across the $100$ intervention cells,
+only four have a positive signed monitorability gap, all of small magnitude,
+and none is a high-Potency cell. The negative tail instead reflects
+over-warning, particularly when coherence-degrading interventions leave a
+safety-sensitive trace or response prefix but produce an unusable answer. On
+the explicit-trace models, stronger steering shifts the pathway signature
+toward execution while recognition and refusal remain visible, making the trace
+more conflicted rather than more sanitized. This is bounded but encouraging
+evidence that the tested interventions do not systematically evade a
+trace-only monitor \citep{baker2025cotmonitoring,korbak2025monitorability}; it
+is not a general guarantee for chain-of-thought monitoring. Only two arms expose
+explicit traces, visible traces need not faithfully represent latent
+computation, and a binary prediction of final harmfulness can miss
+fine-grained process changes. Monitoring pathway-level behaviors may therefore
+be more informative than relying on outcome prediction alone.
+
 \paragraph{Limitations.}
 \label{sec:limitations}
-Several caveats bound these claims. Our selectivity axis
-measures coherence rather than capability, so an intervention that remains fluent while
-undermining task competence would score better than it deserves; extending $\Qual$
-with a benign-utility delta is the most important open improvement to the metric. The
-axes rest on LLM judges validated against human annotation, with moderate agreement
-on the labels driving the headline axes and near-chance agreement on two auxiliary
-and three fine-grained labels that we therefore exclude from every axis; in
-particular, the monitorability result depends on a CoT-only predictor with moderate
-agreement, so it is best read as no covert failure \emph{detectable at this
-reliability}. The grid consists of five 7--8B dense, text-only models evaluated at a single
-seed with inference-time interventions only: the axes are scale-free by construction,
-but the family ordering is not yet verified at a larger scale, on
-mixture-of-experts or multi-modal models, or against fine-tuning-based methods, and
-our intervals are bootstrapped over prompts rather than over generations. Finally, the
-two pre-alignment \model{OLMo-3-base} arms are controls on whether a mechanism exists
-to find one, not a faithfulness comparison between methods.
- 
-\paragraph{Future work.} The most direct next test of a localization claim follows
-from the metric being orientation-agnostic: a genuine safety direction should be
-drivable \emph{both} ways, so an intervention that weakens safety when removed should
-harden it when added, an experiment that the same three axes score by flipping the sign of
-$\Ppot$. Three further directions matter. Whether the monitorability guarantee
-survives models with compressed or latent reasoning is, by the argument above, the
-question that decides how far our positive CoT result generalizes. The quality axis
-should be extended from coherence to benign-utility retention, so that selectivity is
-measured against capability and not only fluency. Model resilience, which refers to how much harm
-the most effective known intervention extracts, varies substantially across our
-models and is not predicted by baseline safety. It is worth tracking as a comparable
-alignment-robustness property as training recipes change.
+Several caveats bound these conclusions. First, $\Qual$ measures coherence
+rather than benign capability: an intervention could preserve fluent responses
+while undermining task competence, and the coherence gate lacks dedicated human
+validation. Second, the headline harmfulness and trace-monitor judges attain
+moderate human agreement, while the pathway judge's strongest validation is
+transfer-domain; the fine-grained pathway labels should therefore remain
+descriptive. The monitorability finding is additionally constrained by the
+moderate reliability of the trace-only predictor and by the fact that only two
+arms expose explicit traces; the early-response-prefix results for the other
+arms are sensitivity analyses rather than chain-of-thought evidence. Third, the
+grid covers five 7–8B dense, text-only model/configuration arms, a single
+generation seed, and inference-time interventions with family-specific,
+non-commensurate dose ladders. Our intervals bootstrap prompts rather than
+model seeds or repeated generations. The family patterns therefore require
+verification at larger scales, across random seeds, on mixture-of-experts and
+multi-modal models, and for fine-tuning-based interventions. Finally, the two
+pre-alignment \model{OLMo-3-Base} arms diagnose baseline confounding and target
+provenance; they neither prove that the checkpoint contains no safety-relevant
+computation nor provide a direct faithfulness ranking between methods.
 
-% ---- ¶1 (What the metric buys future work): decomposing "removes safety" into P,Q,S
-%      and baseline-correcting each gives a comparable, reusable number that survives
-%      porting across models whose base safety differs. The (P,Q,S) vector + Pareto
-%      front keeps the decision transparent; the scalar answers the one-number reviewer.
-
-% ---- ¶2 (Mechanism as the "why" behind S): the 12-label pathway taxonomy
-%      (recognition / refusal-dynamics / rationalisation / execution) is reported as a
-%      descriptive dominant_pathway histogram, explaining HOW safety reasoning changes
-%      on a cell without contaminating a comparable scalar. One worked example.
-
-% ---- ¶2b (What the grid says about the localization claims): read the findings back
-%      through the entailments frame (§3.1). At matched strength, the direction-based
-%      hypotheses pass the signature (necessity + selectivity + depth); head/neuron
-%      localizations mostly fail necessity, and the base_own control shows discovery
-%      returns confident candidates even where there is no mechanism to find.
-%      Consistent with safety being low-rank and distributed rather than a small
-%      circuit. State strictly as evidence about the CLAIMS at these budgets --- not
-%      "safety is a direction".
-
-% ---- ¶2c (Epistemic humility --- necessary, not sufficient): the behavioural
-%      signature is necessary evidence of mechanism identification, never sufficient.
-%      High P shows the target is causally sufficient to DISRUPT safety, not that it
-%      IS the mechanism --- downstream or correlated substrates can score identically,
-%      and interventions with identical signatures form an equivalence class the
-%      metric cannot break. The metric grades localization claims on their own
-%      operational terms; certifying ontology needs circuit-level causal analysis
-%      (complementary, not replaced). This pre-empts the mech-interp objection.
-
-% ---- ¶3 (From suppression to defence): the metric is orientation-agnostic --- a
-%      defence eval flips the sign of P and reuses Q, S unchanged, so the same
-%      instrument scores both breaking and hardening a model.
-
-% ---- ¶4 (Scope / what generalises): 7--8B here; the axes and baseline-correction are
-%      scale-free by construction; generalising beyond suppressive interventions and
-%      beyond 8B is future work (forward-ref Limitations).
+\paragraph{Future work.}
+The most direct mechanistic extension is a bidirectional test: a target whose
+removal weakens refusal should also be tested for whether the inverse
+intervention strengthens safety. The same framework can evaluate this setting
+by reversing the orientation of $\Ppot$ while retaining $\Qual$ and $\Sreason$.
+Coherence Retention should also be extended with benign-utility measurements,
+and monitorability should be tested on models with compressed, latent, or
+otherwise non-verbalized reasoning. Model-level robustness should not be
+inferred from grid-average susceptibility until the intervention portfolio and
+budgets are standardized; a useful benchmark would calibrate these choices and
+estimate variation across seeds and generations. Finally, combining
+direction-level interventions with component-level causal analysis could test
+whether successful directions aggregate distributed features or are
+implemented by identifiable circuits.

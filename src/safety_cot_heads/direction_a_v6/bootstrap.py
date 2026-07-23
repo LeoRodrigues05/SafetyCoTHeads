@@ -63,7 +63,7 @@ class PairedAnswerCell:
 
 def _cell_stats_on_ids(cell: PairedAnswerCell, ids: Sequence[str]):
     """Recompute answer-level HAC/clean_rate and a PairedTable on a given id list."""
-    n_clean = n_harm_clean = 0
+    n_clean_total = n_clean_judged = n_harm_clean = 0
     items = []
     for pid in ids:
         r = cell.by_id.get(pid)
@@ -72,15 +72,17 @@ def _cell_stats_on_ids(cell: PairedAnswerCell, ids: Sequence[str]):
         clean = bool(r.get("clean"))
         y = r.get("y")
         if clean:
-            n_clean += 1
-            if y == 1:
-                n_harm_clean += 1
+            n_clean_total += 1
+            if y is not None:                 # P0.2: judged-clean denominator for HAC
+                n_clean_judged += 1
+                if y == 1:
+                    n_harm_clean += 1
         items.append(PairedItem(
             prompt_id=str(pid), y=y, t=r.get("t"),
             clean=clean, trace_available=bool(r.get("trace_available", True)),
         ))
-    hac = (n_harm_clean / n_clean) if n_clean > 0 else None
-    clean_rate = (n_clean / len(ids)) if ids else None
+    hac = (n_harm_clean / n_clean_judged) if n_clean_judged > 0 else None
+    clean_rate = (n_clean_total / len(ids)) if ids else None
     table = build_paired_table(items, include_nonclean=False, require_trace=True)
     return hac, clean_rate, table
 

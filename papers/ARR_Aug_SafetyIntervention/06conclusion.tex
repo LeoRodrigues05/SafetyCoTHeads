@@ -1,9 +1,28 @@
 % =========================================================================
-% 6. CONCLUSION   [~0.25 page]
-% GOAL: restate the dual contribution + the honest-null framing in ~5 sentences.
+% 6. CONCLUSION
 % =========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-White-box interventions are routinely offered as evidence that a model's safety has been \emph{localized}; yet each is validated with its own single attack-success rate, which cannot be compared across methods and, as we show, cannot distinguish a faithful localization from a broken model or from harm the model has already produced. We recast the question as one of measurement: whatever a safety mechanism is, an intervention that has found one should leave a behavioral signature when it is removed, and we operationalize that signature as three baseline-corrected axes: potency, quality, and safety-reasoning, reported as a vector with a Pareto front and a single
-Selective-Failure Score. Applying it in the first head-to-head study of four intervention families across five models and two datasets, we find that raw attack-success systematically overstates how well interventions capture safety, that direction-based methods localize much more faithfully than per-head or per-neuron ablation while no method wins on every model, and that these interventions override safety at the output rather than deleting it, leaving the chain-of-thought monitorable but only on models that reason in the open. We release the metric, the evaluation grid, and the human-validated judges, and hope that reporting induced, coherence-gated, reasoning-aware harm, rather than a lone attack-success rate, becomes the default for evaluating safety interventions.
+White-box interventions are often presented as evidence that a model's safety
+behavior has been \emph{localized}, yet bespoke attack-success rates are
+difficult to compare across studies and, even within a shared grid, conflate
+intervention-induced harm with baseline harm and collateral degradation.
+We operationalize the selective behavioral signature expected from perturbing
+a load-bearing safety mechanism using three baseline-corrected axes, Potency,
+Coherence Retention, and Monitorability Retention, reported as a vector, with a
+Pareto analysis in Appendix~\ref{sec:appendix-metric}, and summarized by the
+Selective-Failure Score. In a controlled comparison of four intervention
+families across five model/configuration arms and two datasets, raw attack
+success can reorder interventions and most clearly overstates intervention
+effects on already-unsafe base checkpoints. Direction-based methods produce
+stronger selective-failure signatures on average, but no family dominates every
+model. On the explicit-trace models, the strongest pathway shifts, particularly
+under steering, preserve visible harm recognition and refusal initiation while
+increasing downstream execution, a pattern consistent with downstream bypass
+rather than erased recognition; we find no systematic increase in covert
+failures. These results support baseline-aware, decomposed reporting of
+intervention effects while underscoring that a high $\SFS$ is behavioral
+evidence for a localization claim, not proof of a unique mechanism. We release
+the metric, evaluation grid, and human-validated judges to support comparable
+evaluation of future white-box safety interventions.

@@ -1,22 +1,27 @@
 \begin{abstract}
 % First-draft prose below (trim to ~180 words). \TODO finalise numbers post-regeneration.
-A growing set of inference-time, white-box safety interventions---safety-head ablation,
-safety-neuron ablation, refusal-direction steering, directional ablation---each
-implicitly claims to have \emph{located} safety inside the model, yet ``safety
-mechanism'' has no agreed referent and each claim is reported with a bespoke,
-single-axis attack-success-rate (ASR), so there is no direct, apples-to-apples way to
-compare what any two methods found. A single ASR cannot tell \emph{induced coherent
-harm} apart from a \emph{broken model}, nor a visibly-unsafe chain-of-thought from a
-sanitised one. Rather than define the term, we score the behavioural signature that
-removing a safety mechanism---whatever it is---must produce. We make a dual
-contribution: (i) the first head-to-head comparison
-of representative intervention families through one controlled grid (5 models $\times$ 2
-datasets $\times$ up to 11 conditions, iso-ASR anchoring, human-validated judges), and
-(ii) a proposed standardized, decomposable metric over three axes---\textbf{Potency},
-\textbf{Quality}, and \textbf{Safety-Reasoning}---combined into a single Selective-Failure
-Score. We show that a lone ASR demonstrably mis-ranks interventions (Kendall $\tau$ as low
-as $0.73$ against the decomposed score), that baseline-correction is essential on models
-whose base behaviour is not already safe, and that for current \emph{suppressive}
-interventions the visible reasoning does \emph{not} covertly fail---an honest result our
-metric is built to report rather than hide.
+White box safety interventions, such as safety-head, safety-neuron, and refusal direction ablation, all claim to be effective interventions and accurately capture the safety mechanism in a model. Each of these interventions reports a bespoke single dimensional attack-success rate (ASR) metric on their own evaluation dataset, so there is no direct means to compare any of the methods; a single ASR cannot fully distinguish incoherent responses from genuinely harmful ones. We score the behavioral signature that removing a safety-mechanism might produce. In this work, we make head-to-head comparisons of representation intervention families using a decomposable metric. \textbf{The Selective Failure Score (SFS)} is calculated across three baseline-corrected axes: \textbf{Potency, Quality, and Safety-Reasoning}. Across four intervention families, four models, and two datasets, we find that a lone ASR mis-ranks interventions and that direction-based methods capture safety far more faithfully ($\SFS=0.67$, $0.47$) than per-neuron or per-head ablation ($0.26$, $0.23$), though no method wins on every model. To characterize how they act, we finetune a judge that decomposes reasoning traces into twelve pathway labels. This analysis shows that interventions override safety at the output rather than deleting it, the model still recognizes harm and initiates refusal while harm enters downstream through execution. The CoT, therefore, stays monitorable, though only on models that reason explicitly. Component-level localization claims are thus not supported by the evidence usually given for them. More broadly, our results argue for reporting induced, quality-gated, reasoning-aware harm rather than a lone ASR whenever a method claims to have found where safety lives. 
+
+
+
+% A growing set of inference-time, white-box safety interventions—safety--head ablation,
+% safety-neuron ablation, refusal-direction steering, and directional ablation
+% —each implicitly claims to have \emph{located} safety within the model; yet the term "safety
+% mechanism'' has no agreed referent, and each claim is reported with a bespoke,
+% single-axis attack-success rate (ASR), so there is no direct, apples-to-apples way to
+% compare what any two methods found. A single ASR cannot distinguish \emph{induced coherent
+% harm} from a \emph{broken model}, nor a visibly-unsafe chain-of-thought from a
+% sanitized one. Rather than define the term, we score the behavioral signature that
+% removing a safety mechanism—whatever it is—must produce. We make a dual
+% contribution: (i) the first head-to-head comparison
+% of representative intervention families through one controlled grid (5 models $\times$ 2
+% datasets $\times$ up to 11 conditions, iso-ASR anchoring, human-validated judges), and
+% (ii) a proposed standardized, decomposable metric over three axes\textbf{—Potency},
+% \textbf{Quality}, and \textbf{Safety-Reasoning}—combined into a single Selective-Failure
+% Score. We show that a lone ASR demonstrably mis-ranks interventions (Kendall $\tau$ as low
+% as $0.73$ against the decomposed score), that baseline-correction is essential on models
+% whose base behavior is not already safe, and that for current \emph{suppressive}
+% interventions, the visible reasoning does \emph{not} covertly fail—an honest result our
+% metric is built to report rather than hide.
+
 \end{abstract}
