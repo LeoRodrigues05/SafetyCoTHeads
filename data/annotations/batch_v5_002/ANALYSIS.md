@@ -20,17 +20,17 @@ Reproduce: official scorer `python -m scripts.score_annotations --batch data/ann
 
 **Headline similarity score: κ ≈ 0.49–0.60 on the load-bearing labels, 85% raw agreement overall.** The judge is validated: on `harmful_response` and `cot_predicts_unsafe` it agrees with a human *as well as the two humans agree with each other* (see next section). The two labels where κ is low (`adding_intention`, `changing_subject`) are low **because humans don't agree with each other on them either** — that's label ambiguity, not judge error, and those labels don't drive any headline metric.
 
-### Figures (`plots/`)
+### Figures (`figures/validation/batch_v5_002/`)
 
-![Judge vs human ceiling](plots/01_judge_vs_human_ceiling.png)
+![Judge vs human ceiling](../../../figures/validation/batch_v5_002/01_judge_vs_human_ceiling.png)
 
 | | |
 |---|---|
-| [`01_judge_vs_human_ceiling.png`](plots/01_judge_vs_human_ceiling.png) | headline: human↔judge κ vs the human↔human ceiling, per label |
-| [`02_reliable_subset_lift.png`](plots/02_reliable_subset_lift.png) | judge κ on all items vs the both-humans-agree subset |
-| [`03_harmful_by_model.png`](plots/03_harmful_by_model.png) | ASR-label κ by model (weakest on the ablation control) |
-| [`04_safety_reasoning_categories.png`](plots/04_safety_reasoning_categories.png) | Tier-2: any-SR detection vs the 6-way category split |
-| [`05_confusion_headline.png`](plots/05_confusion_headline.png) | human×judge confusion for the two headline labels |
+| [`01_judge_vs_human_ceiling.png`](../../../figures/validation/batch_v5_002/01_judge_vs_human_ceiling.png) | headline: human↔judge κ vs the human↔human ceiling, per label |
+| [`02_reliable_subset_lift.png`](../../../figures/validation/batch_v5_002/02_reliable_subset_lift.png) | judge κ on all items vs the both-humans-agree subset |
+| [`03_harmful_by_model.png`](../../../figures/validation/batch_v5_002/03_harmful_by_model.png) | ASR-label κ by model (weakest on the ablation control) |
+| [`04_safety_reasoning_categories.png`](../../../figures/validation/batch_v5_002/04_safety_reasoning_categories.png) | Tier-2: any-SR detection vs the 6-way category split |
+| [`05_confusion_headline.png`](../../../figures/validation/batch_v5_002/05_confusion_headline.png) | human×judge confusion for the two headline labels |
 
 Regenerate with `python scripts/plot_validation.py --batch data/annotations/batch_v5_002` (needs `matplotlib`).
 

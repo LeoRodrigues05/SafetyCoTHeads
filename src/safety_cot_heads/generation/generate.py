@@ -96,3 +96,43 @@ def generate(lm: LoadedModel,
                     **meta_extra,
                 })
     return rows
+
+
+@torch.no_grad()
+def continue_texts(lm: LoadedModel,
+                   texts: Sequence[str],
+                   decoding: DecodingConfig,
+                   *,
+                   mask_cfg: Optional[Mapping] = None,
+                   neuron_cfg: Optional[Mapping] = None,
+                   steering_cfg: Optional[Mapping] = None,
+                   batch_size: int = 16) -> list[str]:
+    """Greedy-continue already-rendered ``prompt + partial completion`` strings.
+
+    Used to finish reasoning traces that hit the original ``max_new_tokens``.
+    Under greedy decoding the continuation of a prefix is what a single longer
+    run would have produced (up to bf16 batch-composition effects, which also
+    affect the original runs), so a cell can be extended without regenerating
+    the rows that already terminated. Tokenisation mirrors :func:`generate`.
+    Returns only the newly generated text for each input, in input order.
+    """
+    set_seed(decoding.seed)
+    tok = lm.tokenizer
+    order = sorted(range(len(texts)), key=lambda i: len(texts[i]), reverse=True)
+    out: dict[int, str] = {}
+    with ExitStack() as stack:
+        stack.enter_context(lm.head_mask_controller.active(mask_cfg))
+        stack.enter_context(lm.neuron_mask_controller.active(neuron_cfg))
+        stack.enter_context(lm.steering_controller.active(steering_cfg))
+        for s in tqdm(range(0, len(order), batch_size), desc="continue"):
+            idx = order[s:s + batch_size]
+            enc = tok([texts[i] for i in idx], return_tensors="pt", padding=True,
+                      truncation=False).to(lm.device)
+            gen = lm.model.generate(**enc, pad_token_id=tok.pad_token_id,
+                                    **decoding.to_hf_kwargs())
+            new = tok.batch_decode(gen[:, enc["input_ids"].shape[1]:],
+                                   skip_special_tokens=True,
+                                   clean_up_tokenization_spaces=False)
+            for i, t in zip(idx, new):
+                out[i] = t
+    return [out[i] for i in range(len(texts))]

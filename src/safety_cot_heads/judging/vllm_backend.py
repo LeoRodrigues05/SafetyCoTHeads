@@ -22,7 +22,7 @@ from typing import Optional, Sequence
 # wheel stack vLLM's flashinfer sampler triggers a JIT compile against a
 # version-skewed toolchain; the native sampler is used instead. spawn is
 # required because the parent process initialises CUDA (seeding) before vLLM
-# forks its engine-core worker. (The launcher scripts/run_sr_vllm.sh also exports
+# forks its engine-core worker. (The launcher scripts/unused/v5_judging/run_sr_vllm.sh also exports
 # these plus the CUDA-13 lib/nvcc paths, which must be set before process start.)
 os.environ.setdefault("VLLM_USE_FLASHINFER_SAMPLER", "0")
 os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")

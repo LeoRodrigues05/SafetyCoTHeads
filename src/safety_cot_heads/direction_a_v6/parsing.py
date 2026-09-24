@@ -26,6 +26,17 @@ Design decisions (documented so they are auditable, not silent):
   ``trace_text``, leave ``answer_text`` empty, mark
   ``trace_kind="malformed_explicit"``, and surface the item in diagnostics.
 
+* **Pre-filled trace, no closing tag** (v6.1). When the rendered prompt itself
+  ends inside an open ``<think>`` block (OLMo-3-Think, R1-Distill), the
+  completion starts *inside* the trace and carries no opening tag. If it also
+  carries no ``</think>`` (the reasoning was cut off by ``max_new_tokens``), it
+  is the same truncated-trace case as above and is handled identically:
+  ``malformed_explicit``, empty ``answer_text``. v6.0 did not know about the
+  pre-fill, fell through to the no-tag case, and promoted the truncated
+  reasoning to ``answer_text`` -- exactly the trace-into-answer leak this parser
+  exists to prevent. Callers pass ``trace_prefilled`` (see
+  :func:`prompt_prefills_trace`).
+
 * **Multiple closing tags** — deterministic policy: split at the *last*
   ``</think>``. Everything before it is trace, everything after is answer. This
   guarantees no trace content leaks into ``answer_text`` even when the model
@@ -56,7 +67,9 @@ from ..analysis.trajectory import split_sentences
 _THINK_OPEN_RE = re.compile(r"<\s*think\s*>", re.IGNORECASE)
 _THINK_CLOSE_RE = re.compile(r"<\s*/\s*think\s*>", re.IGNORECASE)
 
-PARSER_VERSION = "v6.0"
+# v6.1: pre-filled-trace awareness (truncated OLMo-3-Think / R1 traces are no
+# longer promoted to the final answer).
+PARSER_VERSION = "v6.1"
 
 TRACE_KINDS = ("explicit", "prose_prefix", "none", "malformed_explicit")
 PARSE_STATUSES = (
@@ -106,8 +119,28 @@ def _build_prose_prefix(answer_body: str) -> tuple[str, bool]:
     return " ".join(sents[:-1]).strip(), True
 
 
-def parse_completion(completion: Optional[str]) -> ParsedCompletion:
+def prompt_prefills_trace(rendered_prompt: Optional[str]) -> bool:
+    """True iff the rendered prompt ends inside an open ``<think>`` block.
+
+    Some chat templates (OLMo-3-Think, DeepSeek-R1-Distill) append ``<think>``
+    to the generation prompt, so the completion begins inside the reasoning
+    trace. Decided from the prompt the model actually saw, not from the model
+    name, so it cannot drift from the data.
+    """
+    p = rendered_prompt or ""
+    opens = list(_THINK_OPEN_RE.finditer(p))
+    if not opens:
+        return False
+    return _THINK_CLOSE_RE.search(p, opens[-1].end()) is None
+
+
+def parse_completion(completion: Optional[str],
+                     trace_prefilled: bool = False) -> ParsedCompletion:
     """Split a raw completion string into canonical answer / trace parts.
+
+    ``trace_prefilled`` marks completions whose prompt already opened the
+    ``<think>`` block (:func:`prompt_prefills_trace`); for these a completion
+    with no ``</think>`` is a truncated trace, not an answer.
 
     Never raises: malformed inputs are reported via ``parse_status`` /
     ``trace_kind`` rather than by discarding the row.
@@ -148,9 +181,11 @@ def parse_completion(completion: Optional[str]) -> ParsedCompletion:
             prose_prefix_text="",
         )
 
-    # --- Case B: opening tag but no closing tag -> malformed ----------------
-    if open_match is not None:
-        trace_text = text[open_match.end():].strip()
+    # --- Case B: open trace but no closing tag -> malformed (truncated) ------
+    # The trace is open either because the completion emitted <think> itself or
+    # because the prompt pre-filled it (v6.1).
+    if open_match is not None or trace_prefilled:
+        trace_text = (text[open_match.end():] if open_match is not None else text).strip()
         # Hidden reasoning must NOT become the answer.
         return ParsedCompletion(
             full_completion=text,
@@ -200,7 +235,8 @@ def parse_row(row: dict) -> dict:
     ``parsed`` sub-dict plus top-level convenience mirrors used by the judge
     input builders. The original ``completion`` is retained verbatim.
     """
-    parsed = parse_completion(row.get("completion"))
+    parsed = parse_completion(row.get("completion"),
+                              trace_prefilled=prompt_prefills_trace(row.get("rendered_prompt")))
     out = dict(row)
     out["parsed"] = parsed.to_dict()
     return out

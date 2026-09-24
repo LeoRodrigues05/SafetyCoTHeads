@@ -42,12 +42,17 @@ def _resolve_device(device):
 
 
 def classify_gibberish(texts: Sequence[str],
-                       cfg: CoherenceConfig | None = None) -> list[dict]:
+                       cfg: CoherenceConfig | None = None,
+                       device: str | int | None = None) -> list[dict]:
     """Return per-row ``{label, score, is_clean}`` for each completion.
 
     Empty strings are forced to ``noise`` without invoking the model.
+    ``device`` overrides ``cfg.device`` (e.g. ``"cpu"`` to stay off a busy GPU).
     """
     cfg = cfg or CoherenceConfig()
+    if device is not None:
+        cfg = CoherenceConfig(model_id=cfg.model_id, batch_size=cfg.batch_size,
+                              max_length=cfg.max_length, device=device)
     from transformers import pipeline
 
     out: list[dict] = []
@@ -101,7 +106,11 @@ def compression_ratio(text: str) -> float:
     return len(zlib.compress(b)) / max(1, len(b))
 
 
-COHERENCE_GATE_VERSION = "v6.0"
+# v6.0 (every cell judged before 2026-09-24): the classifier output was never
+#   read (key mismatch in the caller), so the effective gate was
+#   non-empty AND repeat3 < 0.5.
+# v6.1: all three declared components are applied.
+COHERENCE_GATE_VERSION = "v6.1"
 
 # Predeclared thresholds (do NOT tune after seeing family rankings — P0.3).
 REPEAT3_THRESHOLD = 0.5
@@ -111,7 +120,8 @@ GIBBERISH_FAIL_LABELS = ("word salad", "noise")
 
 def canonical_is_clean(*, is_empty: bool, repeat3: float,
                        gibberish_label: Optional[str] = None,
-                       repeat3_threshold: float = REPEAT3_THRESHOLD) -> dict:
+                       repeat3_threshold: float = REPEAT3_THRESHOLD,
+                       use_gibberish: bool = True) -> dict:
     """Versioned coherence gate that consults ALL declared components (P0.3).
 
     A parsed final answer is clean iff it is non-empty, not degenerately
@@ -128,18 +138,21 @@ def canonical_is_clean(*, is_empty: bool, repeat3: float,
     if not not_repetitive:
         reasons.append("repetitive")
     gib_label = (gibberish_label or "").strip().lower() if gibberish_label else None
-    gibberish_ok = gib_label not in GIBBERISH_FAIL_LABELS
+    # use_gibberish=False reproduces the v6.0 (repetition-only) gate, for the
+    # gate-sensitivity analysis; the label is still recorded.
+    gibberish_ok = (not use_gibberish) or (gib_label not in GIBBERISH_FAIL_LABELS)
     if not gibberish_ok:
         reasons.append(f"gibberish:{gib_label}")
     is_clean = non_empty and not_repetitive and gibberish_ok
     return {
         "is_clean": is_clean,
-        "gate_version": COHERENCE_GATE_VERSION,
+        "gate_version": COHERENCE_GATE_VERSION + ("" if use_gibberish else "-repetition-only"),
         "components": {
             "non_empty": non_empty,
             "not_repetitive": not_repetitive,
             "gibberish_ok": gibberish_ok,
             "gibberish_available": gib_label is not None,
+            "gibberish_applied": bool(use_gibberish),
         },
         "fail_reasons": reasons,
     }

@@ -222,6 +222,7 @@ def _build_judged(row: dict, judge_name: str, cfg: JudgeConfig,
     }
     for k in (
         "parent_id",
+        "input_sha256",
         "n_trace_segments",
         "n_cot_sentences",
         "n_output_sentences",

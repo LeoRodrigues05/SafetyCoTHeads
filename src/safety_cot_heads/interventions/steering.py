@@ -37,32 +37,72 @@ def _load_direction(path: str | Path, layer: int) -> torch.Tensor:
 def build_directional_ablation_cfg(*,
                                    direction: torch.Tensor | np.ndarray,
                                    n_layers: int,
-                                   layers: Optional[Sequence[int]] = None) -> dict:
-    """Arditi et al. 2024 default: ablate the refusal direction at every layer."""
+                                   layers: Optional[Sequence[int]] = None,
+                                   mode: str = "ablate") -> dict:
+    """Project the refusal direction out at every layer.
+
+    ``mode="ablate"`` (every existing ``steering_ablate`` cell) cleans only the
+    layer inputs; ``mode="ablate_all"`` cleans every residual write, which is
+    the Arditi et al. (2024) operation (see ``SteeringController``).
+    """
+    if mode not in ("ablate", "ablate_all"):
+        raise ValueError(f"ablation mode must be ablate|ablate_all, got {mode!r}")
     if not isinstance(direction, torch.Tensor):
         direction = torch.as_tensor(np.asarray(direction)).float()
     layers = list(range(n_layers)) if layers is None else list(layers)
     return {
-        "mode": "ablate",
+        "mode": mode,
         "direction": direction,
         "layers": layers,
         "alpha": 1.0,
     }
 
 
+DOSE_MODES = ("absolute", "relative")
+
+
 def build_activation_addition_cfg(*,
                                   direction: torch.Tensor | np.ndarray,
                                   layer: int,
-                                  alpha: float = 1.0) -> dict:
-    """Turner et al. 2023 default: add ``alpha * v`` at one chosen layer."""
+                                  alpha: float = 1.0,
+                                  dose_mode: str = "absolute") -> dict:
+    """Turner et al. 2023 default: add ``alpha * v_hat`` at one chosen layer.
+
+    The controller unit-normalises the direction, so with
+    ``dose_mode="absolute"`` (every existing v5/v6 cell) ``alpha`` is the raw
+    L2 size of the perturbation, identical across models even though their
+    residual streams and harmful-benign separations differ by ~8x.
+    ``dose_mode="relative"`` rescales to ``alpha * ||r_l||``: ``alpha=-1`` then
+    subtracts exactly the harmful-minus-benign mean difference at that layer
+    (Arditi et al.'s activation-addition scale), which is comparable across
+    models.
+    """
+    if dose_mode not in DOSE_MODES:
+        raise ValueError(f"dose_mode must be one of {DOSE_MODES}, got {dose_mode!r}")
     if not isinstance(direction, torch.Tensor):
         direction = torch.as_tensor(np.asarray(direction)).float()
+    norm = float(direction.norm())
+    alpha_abs = float(alpha) * (norm if dose_mode == "relative" else 1.0)
     return {
         "mode": "add",
         "direction": direction,
         "layers": [int(layer)],
-        "alpha": float(alpha),
+        "alpha": alpha_abs,
+        "alpha_requested": float(alpha),
+        "dose_mode": dose_mode,
+        "direction_norm": norm,
     }
+
+
+def random_direction_like(v: torch.Tensor, seed: int) -> torch.Tensor:
+    """Seeded isotropic Gaussian direction with the same L2 norm as ``v``.
+
+    Control for the refusal direction: same layer, same magnitude, same dose
+    ladder, but no harmful-benign information.
+    """
+    g = torch.Generator().manual_seed(int(seed))
+    r = torch.randn(v.shape, generator=g, dtype=torch.float32)
+    return r / (r.norm() + 1e-8) * float(v.norm())
 
 
 def build_steering_cfg_from_file(lm: LoadedModel,
@@ -71,7 +111,9 @@ def build_steering_cfg_from_file(lm: LoadedModel,
                                  layer: int,
                                  mode: Optional[str] = None,
                                  alpha: float = 1.0,
-                                 layers: Optional[Sequence[int]] = None) -> dict:
+                                 layers: Optional[Sequence[int]] = None,
+                                 dose_mode: str = "absolute",
+                                 random_direction_seed: Optional[int] = None) -> dict:
     """Convenience: load a direction from disk and dispatch on ``mode``.
 
     ``mode`` must be given explicitly (``"add"`` or ``"ablate"``). A silent
@@ -85,12 +127,24 @@ def build_steering_cfg_from_file(lm: LoadedModel,
             "refusing to default (ablate silently discards the alpha dose)"
         )
     v = _load_direction(direction_path, layer)
-    if mode == "ablate":
+    extra = {}
+    if random_direction_seed is not None:
+        true_v = v
+        v = random_direction_like(true_v, int(random_direction_seed))
+        extra = {"random_direction_seed": int(random_direction_seed),
+                 "cos_to_refusal_direction": float(
+                     torch.nn.functional.cosine_similarity(v, true_v, dim=0))}
+    if mode in ("ablate", "ablate_all"):
         n_layers, _, _ = num_layers_and_heads(lm.model)
-        return build_directional_ablation_cfg(direction=v, n_layers=n_layers, layers=layers)
-    if mode == "add":
-        return build_activation_addition_cfg(direction=v, layer=layer, alpha=alpha)
-    raise ValueError(f"unknown steering mode {mode!r}; expected add|ablate")
+        out = build_directional_ablation_cfg(direction=v, n_layers=n_layers,
+                                             layers=layers, mode=mode)
+    elif mode == "add":
+        out = build_activation_addition_cfg(direction=v, layer=layer, alpha=alpha,
+                                            dose_mode=dose_mode)
+    else:
+        raise ValueError(f"unknown steering mode {mode!r}; expected add|ablate|ablate_all")
+    out.update(extra)
+    return out
 
 
 @contextmanager

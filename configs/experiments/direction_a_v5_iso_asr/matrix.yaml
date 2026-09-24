@@ -1,6 +1,6 @@
 # Direction A v5 — iso-ASR sweep matrix.
 #
-# A single source of truth for the v5 pipeline. `scripts/make_v5_configs.py`
+# A single source of truth for the v5 pipeline. `scripts/configs/make_v5_configs.py`
 # expands this into per-cell YAMLs (discovery + generation) and per-model
 # sbatch driver scripts. Edit ONLY this file when adding a model, dose,
 # or condition family.
@@ -21,7 +21,7 @@
 #   gen/xstest/baseline.yaml                              (Exp 5: over-refusal probe)
 #   judge.yaml                (clone of 19-v4-jbb-qwen3-judge, gating ON)
 #
-# Run order (per model, see scripts/sbatch/direction_a_v5_per_model.sbatch):
+# Run order (per model, see scripts/unused/v5_pipeline/sbatch/direction_a_v5_per_model.sbatch):
 #   discovery -> generation -> v4 judge -> v4 report (with iso-ASR).
 
 dataset:
@@ -35,7 +35,7 @@ dataset:
 # `xstest` (Experiment 5 — over-refusal probe) is handled separately: it is
 # NOT swept with the attack-side families (ships/neurons/steering-suppress),
 # only with baseline + the defence-side families below — see
-# `scripts/make_v5_configs.py::expand_one_model`.
+# `scripts/configs/make_v5_configs.py::expand_one_model`.
 datasets:
   jbb:
     name: jailbreakbench

@@ -19,6 +19,7 @@ from .parsing import (
     ParsedCompletion,
     parse_completion,
     parse_row,
+    prompt_prefills_trace,
     PARSER_VERSION,
     TRACE_KINDS,
     PARSE_STATUSES,
@@ -41,7 +42,8 @@ from .bootstrap import PairedAnswerCell, paired_bootstrap, CI
 from .sharding import shard_of, assign_shards, verify_partition
 
 __all__ = [
-    "ParsedCompletion", "parse_completion", "parse_row", "PARSER_VERSION",
+    "ParsedCompletion", "parse_completion", "parse_row", "prompt_prefills_trace",
+    "PARSER_VERSION",
     "TRACE_KINDS", "PARSE_STATUSES",
     "PairedItem", "PairedTable", "build_paired_table",
     "MonitorabilityRetention", "monitorability_retention",

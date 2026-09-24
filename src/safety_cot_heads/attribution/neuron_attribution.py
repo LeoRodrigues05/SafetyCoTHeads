@@ -1,32 +1,43 @@
-"""MLP-neuron attribution (Wang et al. 2024, "Finding Safety Neurons in LLMs").
+"""MLP-neuron attribution by harmful-vs-benign activation contrast.
 
-For each (layer, neuron) we score:
+What this implements (every ``neurons_top*`` cell in the v5/v6 grid):
 
-    score(l, n) = mean_{harmful} a_l[n]  -  mean_{benign} a_l[n]
+    score(l, n) = mean_{x in harmful} a_l(x)[n]  -  mean_{x in benign} a_l(x)[n]
 
-where ``a_l ∈ R^{intermediate_size}`` is the **gated activation** that feeds
-``down_proj`` at layer ``l`` (i.e. ``act_fn(gate_proj(h)) * up_proj(h)``).
-This is captured at the **last prompt token** — the same position used by
-SHIPS / Sahara for head attribution, and the most natural choice for
-"refusal-relevant" content as established in Arditi et al. (2024).
+where ``a_l`` is the gated MLP activation feeding ``down_proj``
+(``act_fn(gate_proj(h)) * up_proj(h)``) at the **last prompt token**, harmful =
+MaliciousInstruct, benign = Alpaca. Neurons are ranked by ``|score|`` over all
+layers jointly (no per-layer normalisation) and the top-k are zeroed at every
+position during generation (:class:`NeuronMaskController`).
+
+What it is NOT -- keep paper text consistent with this:
+
+* It is not the safety-specific-neuron procedure of Zhao et al. (ICLR 2025),
+  which scores *both* attention and FFN neurons by the effect of deactivating
+  them on the layer output (FFN: ``|a_n| * ||W_down[:, n]||``), selects neurons
+  important on harmful queries, and removes those also important on general
+  queries.
+* It is not the model-contrast procedure of "Finding Safety Neurons in Large
+  Language Models" (2024), which contrasts activations of an aligned model
+  against its pre-alignment checkpoint on the same inputs.
+
+Known property: raw activation magnitude grows with depth, so the unnormalised
+ranking concentrates the top-k in the last layers (41-55% of the top-1024 sit
+in the final layer for the evaluated models). The random-neuron control
+(``layer_matched_neurons``) matches this per-layer histogram.
 
 Output schema (mirrors SHIPS):
 
     {
       "ranked_neurons": [
         {"neuron_id": "L-N", "layer": L, "neuron": N, "mean_score": float},
-        …
+        ...
       ],
       "n_harmful": int, "n_benign": int,
       "model": str, "datasets": {"harmful": str, "benign": str},
       "default_top_k": 32,
       "citation": "..."
     }
-
-``default_top_k = 32`` follows Wang et al.'s reported "small set of neurons
-(~5 % of one layer)" that, when ablated, produce the largest drop in
-refusal; for Llama-3.1-8B (intermediate_size = 14336) this is intentionally
-conservative — bump it if you want the broader 5 % regime.
 """
 
 from __future__ import annotations
@@ -142,8 +153,9 @@ def neuron_attribution(
         "model": lm.name,
         "default_top_k": cfg.top_k_default,
         "citation": (
-            "Wang et al. 2024, 'Finding Safety Neurons in LLMs'. "
-            "Score = mean(act_harmful) - mean(act_benign) over the last "
-            "prompt token, on the gated activation that feeds down_proj."
+            "Activation contrast: score = mean(act_harmful) - mean(act_benign) "
+            "at the last prompt token, on the gated activation that feeds "
+            "down_proj; ranked by |score| across layers. Not the Zhao et al. "
+            "(2025) deactivation-based procedure."
         ),
     }

@@ -34,12 +34,21 @@ exploratory:
 explicit_trace_models:
   - qwen3_8b
   - olmo3_7b_think
-  - olmo3_7b_base
-  - olmo3_7b_base_own
   - r1_distill_qwen_7b
 
+# CORRECTED 2026-07-26: olmo3_7b_base and olmo3_7b_base_own were declared
+# explicit-trace here, but the parser finds an explicit <think> block in 0% of
+# their completions (86-89% carry a usable prose prefix instead). The aggregator
+# already dropped them from explicit scope on that evidence (P0.8), but the judge
+# runner filters trace stages by THIS list: with the wrong declaration they were
+# excluded from the explicit pass (no trace to read) *and* from the prose-prefix
+# pass (not listed below), so no monitor labels were ever produced for them and
+# S/SFS was undefined for all 40 of their primary cells. They are prose-only and
+# belong here.
 prose_prefix_models:
   - llama31_8b_control
+  - olmo3_7b_base
+  - olmo3_7b_base_own
 
 # Datasets carried into primary answer-safety / monitorability reporting.
 # xstest is an over-refusal probe (benign prompts) and is reported separately.

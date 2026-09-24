@@ -7,9 +7,10 @@ inside the decoder; none of them mutate weights.
 Implemented methods (see citations next to each class):
 
 * :class:`NeuronMaskController` — zero or rescale individual MLP "neurons"
-  (= rows of ``down_proj.weight``, equivalently dims of its input). Used by
-  the Wang et al. (2024) "Finding Safety Neurons" protocol — default
-  ablation = scale input dim to 0 (full ablation).
+  (= rows of ``down_proj.weight``, equivalently dims of its input); the
+  standard neuron-ablation operation — default ablation = scale input dim
+  to 0 (full ablation). Which neurons are ablated is decided upstream
+  (see attribution/neuron_attribution.py).
 * :class:`SteeringController` — add a fixed unit direction $v$ to the residual
   stream at one or more layers, or project $v$ out entirely. The two modes
   cover (a) DSH-style activation addition (Zou et al. 2023; Turner et al.
@@ -33,8 +34,8 @@ from torch import nn
 # Neuron-level MLP ablation
 # ===========================================================================
 class NeuronMaskController:
-    """Ablate individual MLP neurons (Wang et al., "Finding Safety Neurons in
-    LLMs", 2024; closely related to Chen et al. 2024).
+    """Ablate individual MLP neurons (zero their contribution to the residual
+    stream).
 
     Implementation choice
     ---------------------
@@ -52,7 +53,7 @@ class NeuronMaskController:
         Marker string is currently ignored (kept for parity with
         ``HeadMaskController.head_mask``'s qkv marker).
     * ``mask_type`` : ``"scale_mask"`` (default) — multiplies by ``scale_factor``.
-    * ``scale_factor`` : default ``0.0`` (full ablation, matching Wang et al.).
+    * ``scale_factor`` : default ``0.0`` (full ablation).
 
     Multiple controllers can be active simultaneously; the down_proj
     pre-hook only fires the mask if the current layer has entries.
@@ -113,7 +114,7 @@ class NeuronMaskController:
                 raise ValueError(
                     f"NeuronMaskController only supports mask_type='scale_mask' "
                     f"(got {mask_type!r}). Mean-masking neurons is not in the original"
-                    f" Wang et al. protocol."
+                    f" ablation protocol used here."
                 )
             new = x.clone()
             idx = torch.tensor(neurons, device=x.device, dtype=torch.long)
@@ -138,17 +139,25 @@ class SteeringController:
       "Activation Addition" and Zou et al. (2023) "Representation
       Engineering". Choice of layer follows their guidance — usually one
       mid-network layer (≈40 % depth).
-    * ``"ablate"`` — for each token at every layer, project ``v`` out:
-      ``h <- h - ((h @ v_hat) * v_hat)``. This is the **directional
-      ablation** of Arditi et al. (2024) "Refusal in LLMs is Mediated by a
-      Single Direction". Their default applies the projection at every
-      transformer layer; when applied this way to the residual stream it
-      effectively removes the refusal direction from the model's
-      computation.
+    * ``"ablate"`` — for each token, project ``v`` out of the residual stream
+      at the *input* of every listed decoder layer:
+      ``h <- h - ((h @ v_hat) * v_hat)``. This is what every
+      ``steering_ablate`` cell in the v5/v6 grid used. It is weaker than
+      Arditi et al. (2024): inside a layer the MLP still reads the ``v``
+      component that the same layer's attention just wrote, and the last
+      layer's writes are never cleaned before the final norm/unembedding.
+    * ``"ablate_all"`` — Arditi et al. (2024) directional ablation proper:
+      ``v`` is projected out of *every write* to the residual stream (the
+      embedding, via the layer-0 input, plus each layer's attention and MLP
+      writes), so no position of the residual stream ever carries ``v``. The
+      write points are architecture-specific (see :func:`_residual_writers`):
+      pre-norm Llama/Qwen blocks add the raw ``self_attn``/``mlp`` outputs;
+      OLMo-2/3 add ``post_attention_layernorm``/``post_feedforward_layernorm``
+      outputs, which is where the projection has to happen for them.
 
     Configuration (``cfg`` passed to :meth:`active`)
     ------------------------------------------------
-    * ``mode`` : ``"add"`` | ``"ablate"``
+    * ``mode`` : ``"add"`` | ``"ablate"`` | ``"ablate_all"``
     * ``direction`` : 1-D ``torch.Tensor`` of shape ``(hidden_size,)``;
       it is L2-normalised internally for both ``"add"`` and ``"ablate"``.
     * ``layers`` : ``Sequence[int]`` — which decoder-layer inputs to patch.
@@ -176,6 +185,11 @@ class SteeringController:
                     with_kwargs=True,
                 )
             )
+            # residual-stream writers, used only by mode="ablate_all"
+            for writer in _residual_writers(layer):
+                ctrl._handles.append(
+                    writer.register_forward_hook(ctrl._make_writer_hook(layer_idx))
+                )
         return ctrl
 
     def detach(self) -> None:
@@ -206,7 +220,7 @@ class SteeringController:
             v = torch.as_tensor(v)
         v = v.to(device=ref.device, dtype=ref.dtype)
         mode = self._cfg.get("mode", "add")
-        if mode in ("ablate", "add"):
+        if mode in ("ablate", "ablate_all", "add"):
             # Unit-normalise the direction. For "ablate" this is required for the
             # projection; for "add" it makes `alpha` the ABSOLUTE perturbation
             # magnitude (h + alpha * v_unit), so the dose is comparable across
@@ -240,7 +254,7 @@ class SteeringController:
             if mode == "add":
                 alpha = float(cfg.get("alpha", 1.0))
                 new_h = h + alpha * v
-            elif mode == "ablate":
+            elif mode in ("ablate", "ablate_all"):
                 # h.shape: (batch, seq, hidden); v.shape: (hidden,)
                 proj = (h @ v).unsqueeze(-1) * v
                 new_h = h - proj
@@ -252,6 +266,25 @@ class SteeringController:
                 return (args, new_kwargs)
             return ((new_h,) + tuple(args[1:]), kwargs)
         return pre_hook
+
+    def _make_writer_hook(self, layer_idx: int):
+        """Project ``v`` out of a residual-writing module's output (ablate_all)."""
+        def hook(_module, _inputs, output):
+            cfg = self._cfg
+            if cfg is None or cfg.get("mode") != "ablate_all":
+                return None
+            layers = cfg.get("layers")
+            if layers is None or layer_idx not in layers:
+                return None
+            out = output[0] if isinstance(output, tuple) else output
+            if not isinstance(out, torch.Tensor):
+                return None
+            v = self._prepare_direction(out)
+            new = out - (out @ v).unsqueeze(-1) * v
+            if isinstance(output, tuple):
+                return (new,) + tuple(output[1:])
+            return new
+        return hook
 
 
 # ===========================================================================
@@ -270,6 +303,22 @@ def _collect_mlp_layers(model: nn.Module) -> list[nn.Module]:
             raise ValueError("Decoder layer missing `.mlp.down_proj`; unsupported architecture.")
         out.append(mlp)
     return out
+
+
+def _residual_writers(layer: nn.Module) -> list[nn.Module]:
+    """Modules whose output is added to the residual stream inside ``layer``.
+
+    * OLMo-2/3 (reordered norm): ``h + post_attention_layernorm(attn(h))`` and
+      ``h + post_feedforward_layernorm(mlp(h))`` -> the two post-norms.
+    * Pre-norm blocks (Llama, Qwen2/3, Mistral): ``h + attn(norm(h))`` and
+      ``h + mlp(norm(h))`` -> ``self_attn`` and ``mlp``. (In these models
+      ``post_attention_layernorm`` is the MLP's *input* norm, not a writer.)
+    """
+    if hasattr(layer, "post_feedforward_layernorm") and hasattr(layer, "post_attention_layernorm"):
+        return [layer.post_attention_layernorm, layer.post_feedforward_layernorm]
+    # (stub layers in unit tests may carry only an mlp; real decoders carry both)
+    return [m for m in (getattr(layer, "self_attn", None), getattr(layer, "mlp", None))
+            if m is not None]
 
 
 def _collect_decoder_layers(model: nn.Module) -> list[nn.Module]:
